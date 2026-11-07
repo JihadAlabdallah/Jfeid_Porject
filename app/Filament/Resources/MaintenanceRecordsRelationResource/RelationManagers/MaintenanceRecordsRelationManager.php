@@ -88,7 +88,7 @@ class MaintenanceRecordsRelationManager extends RelationManager
                         ?? $livewire->getOwnerRecord()->distance_unit
                 ),
                 ...\App\Filament\Support\ServiceFormFields::other(),
-                \App\Filament\Support\ServiceFormFields::reading(
+                ...\App\Filament\Support\ServiceFormFields::reading(
                     fn ($get, $record, $livewire) => $record?->distance_unit
                         ?? $livewire->getOwnerRecord()->distance_unit
                 ),

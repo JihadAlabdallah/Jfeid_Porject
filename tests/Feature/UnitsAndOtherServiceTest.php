@@ -588,6 +588,146 @@ class UnitsAndOtherServiceTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    // ---- next change for every type ----
+
+    public function test_intervals_per_type_in_km_and_miles(): void
+    {
+        $expected = [
+            'oil_change' => [5000, 3107],
+            'steering_oil_change' => [60000, 37282],
+            'transmission_oil_change' => [60000, 37282],
+            'differential_oil_change' => [60000, 37282],
+            'gear_oil_change' => [60000, 37282],
+            'wheel_service' => [10000, 6214],
+            'battery_service' => [null, null],
+            'other' => [null, null],
+        ];
+
+        foreach ($expected as $type => [$km, $mi]) {
+            $this->assertSame($km, \App\Support\Distance::interval($type, 'km'), "{$type} km");
+            $this->assertSame($mi, \App\Support\Distance::interval($type, 'miles'), "{$type} miles");
+        }
+    }
+
+    public function test_next_change_is_filled_from_the_reading_per_type(): void
+    {
+        $miles = $this->vehicle('miles');
+        $km = $this->vehicle('km');
+
+        $steering = MaintenanceRecord::create(['vehicle_id' => $km->id, 'maintenance_date' => now(), 'type' => 'steering_oil_change', 'current_reading' => 40000]);
+        $wheels = MaintenanceRecord::create(['vehicle_id' => $miles->id, 'maintenance_date' => now(), 'type' => 'wheel_service', 'current_reading' => 20000]);
+        $battery = MaintenanceRecord::create(['vehicle_id' => $km->id, 'maintenance_date' => now(), 'type' => 'battery_service', 'current_reading' => 40000]);
+        $typed = MaintenanceRecord::create(['vehicle_id' => $km->id, 'maintenance_date' => now(), 'type' => 'gear_oil_change', 'current_reading' => 40000, 'next_change_reading' => 90000]);
+
+        $this->assertSame(100000, $steering->next_change_reading);
+        $this->assertSame(26214, $wheels->next_change_reading);
+        $this->assertSame('miles', $wheels->distance_unit);
+        $this->assertNull($battery->next_change_reading);
+        $this->assertSame(90000, $typed->next_change_reading);
+    }
+
+    public function test_admin_form_fills_next_change_for_steering_in_miles(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle('miles');
+
+        Livewire::test(CreateMaintenanceRecord::class)
+            ->fillForm([
+                'user_id' => $this->admin->id,
+                'vehicle_id' => $vehicle->id,
+                'type' => 'steering_oil_change',
+                'oil_type' => 'ATF',
+                'quantity' => '1',
+                'maintenance_date' => now()->toDateTimeString(),
+            ])
+            ->fillForm(['current_reading' => '40000'])
+            ->assertFormSet(['next_change_reading' => 77282])
+            ->assertSee('Filled automatically: +37,282 mi')
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $record = MaintenanceRecord::latest('id')->first();
+        $this->assertSame(40000, $record->current_reading);
+        $this->assertSame(77282, $record->next_change_reading);
+    }
+
+    public function test_battery_and_other_next_change_is_entered_by_hand(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle();
+
+        Livewire::test(CreateMaintenanceRecord::class)
+            ->fillForm([
+                'user_id' => $this->admin->id,
+                'vehicle_id' => $vehicle->id,
+                'type' => 'battery_service',
+                'brand' => 'Bosch',
+                'size' => '70Ah',
+                'maintenance_date' => now()->toDateTimeString(),
+            ])
+            ->fillForm(['current_reading' => '40000'])
+            ->assertFormSet(['next_change_reading' => null])
+            ->assertSee('Enter it yourself')
+            ->fillForm(['next_change_reading' => '100000'])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(100000, MaintenanceRecord::latest('id')->first()->next_change_reading);
+    }
+
+    public function test_detail_edit_page_fills_and_saves_next_change(): void
+    {
+        $this->admin();
+        $record = $this->record($this->vehicle(), 'transmission_oil_change');
+        $transmission = $record->transmissionOilChange()->create(['oil_type' => 'ATF', 'quantity' => 6]);
+
+        Livewire::test(\App\Filament\Resources\TransmissionOilChangeResource\Pages\EditTransmissionOilChange::class, ['record' => $transmission->getRouteKey()])
+            ->fillForm(['current_reading' => '30000'])
+            ->assertFormSet(['next_change_reading' => 90000])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $fresh = $record->fresh();
+        $this->assertSame(30000, $fresh->current_reading);
+        $this->assertSame(90000, $fresh->next_change_reading);
+
+        $this->get(\App\Filament\Resources\TransmissionOilChangeResource::getUrl('index'))
+            ->assertSee('30,000 km')
+            ->assertSee('90,000 km');
+    }
+
+    public function test_history_api_and_list_show_next_change_for_every_type(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle();
+        $diff = MaintenanceRecord::create(['vehicle_id' => $vehicle->id, 'maintenance_date' => '2026-11-01 10:00:00', 'type' => 'differential_oil_change', 'current_reading' => 10000]);
+        $diff->differentialOilChange()->create(['oil_type' => '75W-90', 'quantity' => 1]);
+        $oilRecord = MaintenanceRecord::create(['vehicle_id' => $vehicle->id, 'maintenance_date' => '2026-11-05 10:00:00', 'type' => 'oil_change']);
+        OilChange::create(['record_id' => $oilRecord->id, 'current_km' => '52000']);
+
+        $this->getJson("/api/vehicles/{$vehicle->id}")
+            ->assertOk()
+            ->assertJsonPath('data.maintenance_records.0.maintenance.differential_oil_change.next_change_reading', 70000)
+            ->assertJsonPath('data.maintenance_records.1.maintenance.oil_change.next_change_reading', 57000);
+
+        Livewire::test(\App\Filament\Resources\MaintenanceRecordResource\Pages\ListMaintenanceRecords::class)
+            ->assertSee('70,000 km')
+            ->assertSee('57,000 km');
+    }
+
+    public function test_app_gets_next_change_when_sending_a_reading(): void
+    {
+        $vehicle = $this->vehicle('miles');
+
+        $this->postJson('/api/maintenance-records', [
+            'vehicle_id' => $vehicle->id,
+            'maintenance_date' => '2026-11-08 09:00:00',
+            'type' => 'gear_oil_change',
+            'current_reading' => 10000,
+        ])->assertCreated()
+            ->assertJsonPath('data.next_change_reading', 47282);
+    }
+
     public function test_existing_types_still_work_unchanged(): void
     {
         $vehicle = $this->vehicle();

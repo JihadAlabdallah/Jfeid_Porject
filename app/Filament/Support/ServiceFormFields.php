@@ -54,21 +54,50 @@ class ServiceFormFields
     }
 
     /**
-     * Odometer reading for every type except Oil Change (which has its own
-     * Current reading / Next change fields). Saved on the record.
+     * Odometer reading + next change for every type except Oil Change (which
+     * has its own fields). Saved on the record. Next change fills itself in
+     * for types with a standard interval and stays editable.
      *
      * @param  Closure(Get, mixed, mixed): ?string  $unit  resolves the unit from ($get, $record, $livewire)
      */
-    public static function reading(Closure $unit): TextInput
+    public static function reading(Closure $unit): array
     {
-        return TextInput::make('current_reading')
-            ->label('Current reading')
-            ->numeric()
-            ->minValue(0)
-            ->maxValue(4294967295)
-            ->suffix(fn (Get $get, $record, $livewire) => Distance::suffix($unit($get, $record, $livewire)))
-            ->helperText('Odometer at the time of the service (optional).')
-            ->visible(fn (Get $get) => filled($get('type')) && $get('type') !== 'oil_change');
+        $visible = fn (Get $get) => filled($get('type')) && $get('type') !== 'oil_change';
+        $suffix = fn (Get $get, $record, $livewire) => Distance::suffix($unit($get, $record, $livewire));
+
+        return [
+            TextInput::make('current_reading')
+                ->label('Current reading')
+                ->numeric()
+                ->minValue(0)
+                ->maxValue(4294967295)
+                ->suffix($suffix)
+                ->helperText('Odometer at the time of the service (optional).')
+                ->live(onBlur: true)
+                ->afterStateUpdated(function ($state, Set $set, Get $get, $record, $livewire) use ($unit) {
+                    $next = Distance::nextChange($state, $unit($get, $record, $livewire), (string) $get('type'));
+
+                    if ($next !== null) {
+                        $set('next_change_reading', $next);
+                    }
+                })
+                ->visible($visible),
+
+            TextInput::make('next_change_reading')
+                ->label('Next change at')
+                ->numeric()
+                ->minValue(0)
+                ->maxValue(4294967295)
+                ->suffix($suffix)
+                ->helperText(function (Get $get, $record, $livewire) use ($unit) {
+                    $label = Distance::intervalLabel((string) $get('type'), $unit($get, $record, $livewire));
+
+                    return $label === null
+                        ? 'Optional. Enter it yourself: this service has no standard distance.'
+                        : "Filled automatically: {$label}. You can change it.";
+                })
+                ->visible($visible),
+        ];
     }
 
     /** Fields of the "Other" type. Price and employee are the record's own fields. */

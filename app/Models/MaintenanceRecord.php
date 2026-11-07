@@ -28,23 +28,33 @@ class MaintenanceRecord extends Model
         'technician_name',
         'price',
         'current_reading',
+        'next_change_reading',
         'distance_unit',
     ];
 
     protected $casts = [
         'price' => 'float',
         'current_reading' => 'integer',
+        'next_change_reading' => 'integer',
     ];
 
     /**
-     * A reading is saved in the car's unit at the time of the service, so
-     * switching the car between km and miles later never changes it.
+     * - A reading is saved in the car's unit at the time of the service, so
+     *   switching the car between km and miles later never changes it.
+     * - An empty "next change" is filled from the reading + the type's
+     *   interval (oil changes do this on the oil change itself).
      */
     protected static function booted(): void
     {
         static::saving(function (MaintenanceRecord $record) {
-            if ($record->current_reading !== null && blank($record->distance_unit)) {
+            $hasReading = $record->current_reading !== null || $record->next_change_reading !== null;
+
+            if ($hasReading && blank($record->distance_unit)) {
                 $record->distance_unit = Distance::normalize($record->vehicle()->first()?->distance_unit);
+            }
+
+            if ($record->next_change_reading === null && $record->current_reading !== null && $record->type !== 'oil_change') {
+                $record->next_change_reading = Distance::nextChange($record->current_reading, $record->distance_unit, $record->type);
             }
         });
     }
@@ -53,19 +63,21 @@ class MaintenanceRecord extends Model
      * Odometer reading of this service for the app: oil changes keep theirs
      * on the oil change, every other type on the record.
      *
-     * @return array{current_reading: ?int, distance_unit: string}
+     * @return array{current_reading: ?int, next_change_reading: ?int, distance_unit: string}
      */
     public function reading(): array
     {
         if ($this->type === 'oil_change' && $this->oilChange) {
             return [
                 'current_reading' => $this->current_reading ?? Distance::parse($this->oilChange->current_km),
+                'next_change_reading' => $this->next_change_reading ?? Distance::parse($this->oilChange->next_change_km),
                 'distance_unit' => Distance::normalize($this->oilChange->distance_unit),
             ];
         }
 
         return [
             'current_reading' => $this->current_reading,
+            'next_change_reading' => $this->next_change_reading,
             'distance_unit' => Distance::normalize($this->distance_unit ?? $this->vehicle?->distance_unit),
         ];
     }

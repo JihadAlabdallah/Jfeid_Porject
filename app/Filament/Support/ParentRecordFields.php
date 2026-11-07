@@ -15,7 +15,7 @@ use Filament\Tables\Columns\TextColumn;
  */
 class ParentRecordFields
 {
-    public const FIELDS = ['current_reading', 'technician_name', 'price'];
+    public const FIELDS = ['current_reading', 'next_change_reading', 'technician_name', 'price'];
 
     /** Unit shown next to a reading: the record's own, else its car's. */
     public static function unitOf($maintenanceRecord): string
@@ -35,10 +35,36 @@ class ParentRecordFields
             ->maxValue(4294967295)
             ->suffix(fn ($record) => self::unitOf($record?->maintenanceRecord))
             ->dehydrated(false)
-            ->afterStateHydrated(fn (TextInput $component, $record) => $component->state($record?->maintenanceRecord?->current_reading));
+            ->afterStateHydrated(fn (TextInput $component, $record) => $component->state($record?->maintenanceRecord?->current_reading))
+            ->live(onBlur: true)
+            ->afterStateUpdated(function ($state, \Filament\Forms\Set $set, $record) {
+                $parent = $record?->maintenanceRecord;
+                $next = $parent ? Distance::nextChange($state, $parent->distance_unit ?? $parent->vehicle?->distance_unit, $parent->type) : null;
+
+                if ($next !== null) {
+                    $set('next_change_reading', $next);
+                }
+            });
+
+        $nextChange = TextInput::make('next_change_reading')
+            ->label('Next change at')
+            ->numeric()
+            ->minValue(0)
+            ->maxValue(4294967295)
+            ->suffix(fn ($record) => self::unitOf($record?->maintenanceRecord))
+            ->helperText(function ($record) {
+                $parent = $record?->maintenanceRecord;
+                $label = $parent ? Distance::intervalLabel($parent->type, $parent->distance_unit ?? $parent->vehicle?->distance_unit) : null;
+
+                return $label === null
+                    ? 'Optional. Enter it yourself: this service has no standard distance.'
+                    : "Filled automatically: {$label}. You can change it.";
+            })
+            ->dehydrated(false)
+            ->afterStateHydrated(fn (TextInput $component, $record) => $component->state($record?->maintenanceRecord?->next_change_reading));
 
         return [
-            ...($withReading ? [$reading] : []),
+            ...($withReading ? [$reading, $nextChange] : []),
             TextInput::make('technician_name')
                 ->label('Technician / Employee')
                 ->maxLength(255)
@@ -59,14 +85,22 @@ class ParentRecordFields
 
     public static function tableColumns(bool $withReading = true): array
     {
+        $unit = fn ($record) => $record->maintenanceRecord?->distance_unit ?? $record->maintenanceRecord?->vehicle?->distance_unit;
+
         $reading = TextColumn::make('maintenanceRecord.current_reading')
             ->label('Reading')
-            ->formatStateUsing(fn ($state, $record) => Distance::format($state, $record->maintenanceRecord?->distance_unit ?? $record->maintenanceRecord?->vehicle?->distance_unit))
+            ->formatStateUsing(fn ($state, $record) => Distance::format($state, $unit($record)))
+            ->placeholder('-')
+            ->toggleable();
+
+        $nextChange = TextColumn::make('maintenanceRecord.next_change_reading')
+            ->label('Next change')
+            ->formatStateUsing(fn ($state, $record) => Distance::format($state, $unit($record)))
             ->placeholder('-')
             ->toggleable();
 
         return [
-            ...($withReading ? [$reading] : []),
+            ...($withReading ? [$reading, $nextChange] : []),
             TextColumn::make('maintenanceRecord.technician_name')
                 ->label('Technician')
                 ->placeholder('-')

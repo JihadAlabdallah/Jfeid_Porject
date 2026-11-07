@@ -172,7 +172,7 @@ class MaintenanceRecordResource extends Resource
 
                 ...\App\Filament\Support\ServiceFormFields::other(),
 
-                \App\Filament\Support\ServiceFormFields::reading(
+                ...\App\Filament\Support\ServiceFormFields::reading(
                     fn (Get $get, $record) => $record?->distance_unit
                         ?? Vehicle::find($get('vehicle_id'))?->distance_unit
                 ),
@@ -215,6 +215,12 @@ class MaintenanceRecordResource extends Resource
                 Tables\Columns\TextColumn::make('current_reading')
                     ->label('Reading')
                     ->getStateUsing(fn ($record) => $record->reading()['current_reading'])
+                    ->formatStateUsing(fn ($state, $record) => \App\Support\Distance::format($state, $record->reading()['distance_unit']))
+                    ->placeholder('-')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('next_change_reading')
+                    ->label('Next change')
+                    ->getStateUsing(fn ($record) => $record->reading()['next_change_reading'])
                     ->formatStateUsing(fn ($state, $record) => \App\Support\Distance::format($state, $record->reading()['distance_unit']))
                     ->placeholder('-')
                     ->toggleable(),
