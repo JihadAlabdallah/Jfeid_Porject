@@ -13,7 +13,8 @@ class ListSteeringOilChanges extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->url(\App\Filament\Support\MaintenanceFlow::createUrl('steering_oil_change')),
         ];
     }
 }

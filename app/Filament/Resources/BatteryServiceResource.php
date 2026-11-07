@@ -21,10 +21,7 @@ class BatteryServiceResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('record_id')
-                    ->relationship('maintenanceRecord', 'id')
-                    ->label('Maintenance Record')
-                    ->required(),
+                \App\Filament\Support\MaintenanceFlow::recordField(),
                 Forms\Components\TextInput::make('brand')
                     ->label('Brand')
                     ->placeholder('Enter brand')

@@ -27,10 +27,7 @@ class TransmissionOilChangeResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('record_id')
-                    ->relationship('maintenanceRecord', 'id')
-                    ->label('Maintenance Record')
-                    ->required(),
+                \App\Filament\Support\MaintenanceFlow::recordField(),
                 Forms\Components\TextInput::make('oil_type')
                     ->label('Oil Type')
                     ->placeholder('Enter oil type')

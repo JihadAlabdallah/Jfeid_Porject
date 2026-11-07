@@ -13,7 +13,8 @@ class ListWheelServices extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->url(\App\Filament\Support\MaintenanceFlow::createUrl('wheel_service')),
         ];
     }
 }

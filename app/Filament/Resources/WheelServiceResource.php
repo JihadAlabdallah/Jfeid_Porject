@@ -30,10 +30,7 @@ class WheelServiceResource extends Resource
     {
         return $form
             ->schema([
-                Select::make('record_id')
-                    ->relationship('maintenanceRecord', 'id')
-                    ->label('Maintenance Record')
-                    ->required(),
+                \App\Filament\Support\MaintenanceFlow::recordField(),
                 TextInput::make('wheel_name')
                     ->label('Wheel Name')
                     ->placeholder('Enter wheel name')

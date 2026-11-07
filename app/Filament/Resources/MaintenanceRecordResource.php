@@ -85,6 +85,8 @@ class MaintenanceRecordResource extends Resource
                         'wheel_service' => 'Wheels service',
                     ])
                     ->required()
+                    // pre-selected when coming from a detail page's "New" button
+                    ->default(fn () => \App\Filament\Support\MaintenanceFlow::typeFromRequest())
                     ->live(),
                 TextInput::make('brand')
                     ->label('Brand')

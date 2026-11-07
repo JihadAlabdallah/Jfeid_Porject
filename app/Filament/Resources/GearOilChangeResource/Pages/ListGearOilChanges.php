@@ -13,7 +13,8 @@ class ListGearOilChanges extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->url(\App\Filament\Support\MaintenanceFlow::createUrl('gear_oil_change')),
         ];
     }
 }
