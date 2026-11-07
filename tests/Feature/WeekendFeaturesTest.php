@@ -79,28 +79,6 @@ class WeekendFeaturesTest extends TestCase
         $this->postJson('/api/profile/update/x', ['phonenumber' => '1'])->assertUnauthorized();
     }
 
-    // ---- km / miles ----
-
-    public function test_users_default_to_km_and_can_switch_to_miles(): void
-    {
-        $user = $this->user();
-        $this->assertSame('km', $user->fresh()->distance_unit);
-
-        Sanctum::actingAs($user);
-        $this->postJson('/api/profile/update/x', ['distance_unit' => 'miles'])
-            ->assertOk()
-            ->assertJsonPath('data.distance_unit', 'miles');
-
-        $this->getJson('/api/profile')->assertJsonPath('data.distance_unit', 'miles');
-    }
-
-    public function test_invalid_distance_unit_is_rejected(): void
-    {
-        Sanctum::actingAs($this->user());
-
-        $this->postJson('/api/profile/update/x', ['distance_unit' => 'm'])->assertUnprocessable();
-    }
-
     // ---- multiple vehicles ----
 
     public function test_my_vehicles_returns_only_the_signed_in_users_vehicles(): void

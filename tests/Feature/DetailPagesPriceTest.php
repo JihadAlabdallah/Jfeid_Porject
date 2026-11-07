@@ -34,6 +34,7 @@ class DetailPagesPriceTest extends TestCase
         Resources\TransmissionOilChangeResource::class => 'transmission_oil_change',
         Resources\DifferentialOilChangeResource::class => 'differential_oil_change',
         Resources\GearOilChangeResource::class => 'gear_oil_change',
+        Resources\OtherServiceResource::class => 'other',
     ];
 
     private User $admin;

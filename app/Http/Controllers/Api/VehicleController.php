@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
+use App\Support\Distance;
 use App\Traits\HideTimestampsTrait;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -44,6 +45,7 @@ class VehicleController extends Controller
     {
         $data = $request->validate([
             'type' => 'required|string|max:255',
+            'distance_unit' => 'sometimes|in:' . implode(',', Distance::UNITS),
         ]);
 
         $vehicle = $request->user()->vehicles()->create($data);
@@ -53,6 +55,33 @@ class VehicleController extends Controller
             'message' => 'Vehicle created successfully.',
             'data' => $vehicle,
         ], 201);
+    }
+
+    /**
+     * PATCH /my-vehicles/{id}: rename a vehicle or switch it between km and
+     * miles. Only the signed-in user's own vehicles. Old oil changes keep the
+     * unit they were recorded in.
+     */
+    public function updateMine(Request $request, string $id)
+    {
+        $vehicle = $request->user()->vehicles()->find($id);
+
+        if (! $vehicle) {
+            return response()->json(['status' => 'error', 'message' => 'Vehicle not found.'], 404);
+        }
+
+        $data = $request->validate([
+            'type' => 'sometimes|string|max:255',
+            'distance_unit' => 'sometimes|in:' . implode(',', Distance::UNITS),
+        ]);
+
+        $vehicle->update($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Vehicle updated successfully.',
+            'data' => $vehicle->fresh(),
+        ]);
     }
 
     /**
@@ -108,6 +137,7 @@ class VehicleController extends Controller
             'transmission_oil_change' => 'transmissionOilChange',
             'differential_oil_change' => 'differentialOilChange',
             'oil_change' => 'oilChange',
+            'other' => 'otherService',
             default => null,
         };
 
@@ -147,6 +177,7 @@ class VehicleController extends Controller
             'id' => $vehicle->id,
             'user_id' => $vehicle->user_id,
             'type' => $vehicle->type,
+            'distance_unit' => $vehicle->distance_unit,
             'user' => $vehicle->user,
             'maintenance_records' => array_values($grouped)
         ]

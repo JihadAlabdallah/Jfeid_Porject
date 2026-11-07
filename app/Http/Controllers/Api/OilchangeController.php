@@ -44,6 +44,7 @@ class OilchangeController extends Controller
             'oil_quantity' => 'nullable|string|max:255',
             'filter' => 'nullable|string|max:255',
             'next_change_km' => 'nullable|string',
+            'distance_unit' => 'nullable|in:km,miles',
         ]);
 
         // Create a new oil change record
@@ -54,6 +55,8 @@ class OilchangeController extends Controller
             'oil_quantity' => $request->oil_quantity,
             'filter' => $request->filter,
             'next_change_km' => $request->next_change_km,
+            // empty = the car's unit; empty next change = current + 5,000 km / 3,107 mi
+            'distance_unit' => $request->distance_unit,
         ]);
 
         return response()->json([
@@ -89,7 +92,17 @@ class OilchangeController extends Controller
             'oil_quantity' => 'nullable|string|max:255',
             'filter' => 'nullable|string|max:255',
             'next_change_km' => 'nullable|string',
+            'distance_unit' => 'nullable|in:km,miles',
         ]);
+
+        if (! $oilChanges) {
+            return response()->json(['status' => 'error', 'message' => 'Oil change not found.'], 404);
+        }
+
+        // this used to return "updated" without saving anything
+        $oilChanges->update($request->only([
+            'current_km', 'oil_type', 'oil_quantity', 'filter', 'next_change_km', 'distance_unit',
+        ]));
 
         // Return the updated oil change record as a JSON response
         return response()->json([

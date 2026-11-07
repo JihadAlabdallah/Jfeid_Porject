@@ -82,7 +82,7 @@ class AuthController extends Controller
                 'message' => 'Logged In Successfully!',
                 'vehicle_id' => $vehicle_id,
                 // all of the user's vehicles, for clients with more than one
-                'vehicles' => $user->vehicles()->orderBy('id')->get(['id', 'type']),
+                'vehicles' => $user->vehicles()->orderBy('id')->get(['id', 'type', 'distance_unit']),
                 'token' => $access_token
             ], 200);
         } else {
@@ -108,8 +108,8 @@ class AuthController extends Controller
         ]);
     }
     /**
-     * Update the signed-in user's profile (name, email, phone number, car plate,
-     * distance unit). Only the fields that are sent are changed.
+     * Update the signed-in user's profile (name, email, phone number, car plate).
+     * Only the fields that are sent are changed. (KM/miles is set per car.)
      *
      * Route: POST /profile/update/{token}. The {token} segment is kept for
      * compatibility with the app; authentication comes from the Bearer token.
@@ -130,7 +130,6 @@ class AuthController extends Controller
             'email' => 'sometimes|nullable|email|max:255|unique:users,email,' . $user->id,
             'phonenumber' => 'sometimes|string|max:20',
             'carplate' => 'sometimes|nullable|string|max:20',
-            'distance_unit' => 'sometimes|in:' . implode(',', User::DISTANCE_UNITS),
         ]);
 
         $user->update($data);

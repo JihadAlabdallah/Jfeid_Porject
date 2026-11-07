@@ -16,7 +16,13 @@ class Vehicle extends Model
      */
     protected $fillable = [
         'user_id',
-        'type'
+        'type',
+        'distance_unit',
+    ];
+
+    /** New cars are in km unless set otherwise. */
+    protected $attributes = [
+        'distance_unit' => 'km',
     ];
 
     /**

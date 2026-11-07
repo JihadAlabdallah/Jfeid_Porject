@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Vehicle;
 use App\Models\OilChange;
+use App\Models\OtherService;
 use App\Models\WheelService;
 use App\Models\GearOilChange;
 use App\Models\BatteryService;
@@ -33,9 +34,10 @@ class MaintenanceRecord extends Model
 
     /**
      * Maps each maintenance type to its detail relation and the form fields
-     * that belong to it.
+     * that belong to it. "required" lists the fields that must be filled for
+     * the detail row to be written (defaults to all of them).
      *
-     * @var array<string, array{relation: string, fields: array<string>}>
+     * @var array<string, array{relation: string, fields: array<string>, required?: array<string>}>
      */
     public const TYPE_DETAILS = [
         'battery_service' => [
@@ -49,6 +51,8 @@ class MaintenanceRecord extends Model
         'oil_change' => [
             'relation' => 'oilChange',
             'fields' => ['oil_type', 'oil_quantity', 'current_km', 'next_change_km', 'filter'],
+            // next_change_km is filled automatically when left empty (see OilChange)
+            'required' => ['oil_type', 'oil_quantity', 'current_km', 'filter'],
         ],
         'gear_oil_change' => [
             'relation' => 'gearOilChange',
@@ -66,6 +70,23 @@ class MaintenanceRecord extends Model
             'relation' => 'steeringOilChange',
             'fields' => ['oil_type', 'quantity'],
         ],
+        'other' => [
+            'relation' => 'otherService',
+            'fields' => ['name', 'category', 'description', 'note', 'quantity'],
+            'required' => ['name'],
+        ],
+    ];
+
+    /** Labels for the maintenance type dropdowns. */
+    public const TYPE_LABELS = [
+        'oil_change' => 'Oil Change',
+        'steering_oil_change' => 'Steering Oil Change',
+        'transmission_oil_change' => 'Transmission Oil Change',
+        'differential_oil_change' => 'Differential Oil Change',
+        'gear_oil_change' => 'Gear Oil Change',
+        'battery_service' => 'Battery Service',
+        'wheel_service' => 'Wheel Service',
+        'other' => 'Other',
     ];
 
     /**
@@ -83,14 +104,18 @@ class MaintenanceRecord extends Model
         }
 
         $payload = [];
+        $required = $detail['required'] ?? $detail['fields'];
 
         foreach ($detail['fields'] as $field) {
-            // the detail tables are all NOT NULL, so skip rather than write null
-            if (! array_key_exists($field, $data) || $data[$field] === null) {
+            $value = $data[$field] ?? null;
+            $value = $value === '' ? null : $value;
+
+            // a required field is missing: write nothing rather than a broken row
+            if ($value === null && in_array($field, $required, true)) {
                 return;
             }
 
-            $payload[$field] = $data[$field];
+            $payload[$field] = $value;
         }
 
         $this->{$detail['relation']}()->updateOrCreate([], $payload);
@@ -165,6 +190,14 @@ class MaintenanceRecord extends Model
     {
         return $this->hasOne(GearOilChange::class,'record_id');
     }
+    /**
+     * Get the "other" service details associated with the maintenance record.
+     */
+    public function otherService()
+    {
+        return $this->hasOne(OtherService::class, 'record_id');
+    }
+
     /**
      * Get the oil change associated with the maintenance record.
      */

@@ -22,7 +22,8 @@ class MaintenanceRecordController extends Controller
             'wheelService',
             'gearOilChange',
             'transmissionOilChange',
-            'differentialOilChange'
+            'differentialOilChange',
+            'otherService'
         ])->get();
 
         // Return the maintenance records as a JSON response
@@ -83,7 +84,8 @@ class MaintenanceRecordController extends Controller
             'wheelService',
             'gearOilChange',
             'transmissionOilChange',
-            'differentialOilChange'
+            'differentialOilChange',
+            'otherService'
         ])->findOrFail($id);
        // $maintenanceRecord->makeHidden(['created_at', 'updated_at']);
 //$maintenanceRecord->user->makeHidden(['created_at', 'updated_at']);

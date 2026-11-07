@@ -18,15 +18,7 @@ class MaintenanceRecordsRelationManager extends RelationManager
             ->schema([
                 Forms\Components\Select::make('type')
                     ->label('Maintenance Type')
-                    ->options([
-                        'oil_change' => 'Oil Change',
-                        'steering_oil_change' => 'Steering Oil Change',
-                        'transmission_oil_change' => 'Transmission Oil Change',
-                        'differential_oil_change' => 'Differential Oil Change',
-                        'gear_oil_change' => 'Gear Oil Change',
-                        'battery_service' => 'Battery Service',
-                        'wheel_service' => 'Wheel Service',
-                    ])
+                    ->options(\App\Models\MaintenanceRecord::TYPE_LABELS)
                     ->required()
                     ->live(),
 
@@ -90,16 +82,12 @@ class MaintenanceRecordsRelationManager extends RelationManager
                     ->numeric()
                     ->visible(fn($get) => $get('type') === 'oil_change')
                     ->required(fn($get) => $get('type') === 'oil_change'),
-                Forms\Components\TextInput::make('current_km')
-                    ->label('Current KM')
-                    ->numeric()
-                    ->visible(fn($get) => $get('type') === 'oil_change')
-                    ->required(fn($get) => $get('type') === 'oil_change'),
-                Forms\Components\TextInput::make('next_change_km')
-                    ->label('Next Change KM')
-                    ->numeric()
-                    ->visible(fn($get) => $get('type') === 'oil_change')
-                    ->required(fn($get) => $get('type') === 'oil_change'),
+                // unit of the car whose page this is
+                ...\App\Filament\Support\ServiceFormFields::oilReadings(
+                    fn ($get, $record, $livewire) => $record?->oilChange?->distance_unit
+                        ?? $livewire->getOwnerRecord()->distance_unit
+                ),
+                ...\App\Filament\Support\ServiceFormFields::other(),
                 Forms\Components\TextInput::make('filter')
                     ->label('Filter Type')
                     ->visible(fn($get) => $get('type') === 'oil_change')
@@ -147,54 +135,7 @@ class MaintenanceRecordsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->after(function ($record, $data) {
-                        if ($record->type === 'battery_service') {
-                            $record->batteryService()->create([
-                                'brand' => $data['brand'],
-                                'size' => $data['size'],
-                            ]);
-                        }
-                        if ($record->type === 'wheel_service') {
-                            $record->wheelService()->create([
-                                'wheel_name' => $data['wheel_name'],
-                                'quantity' => $data['quantity'],
-                                'wheel_size' => $data['wheel_size'],
-                            ]);
-                        }
-                        if ($record->type === 'gear_oil_change') {
-                            $record->gearOilChange()->create([
-                                'oil_type' => $data['oil_type'],
-                                'quantity' => $data['quantity'],
-                            ]);
-                        }
-                        if ($record->type === 'differential_oil_change') {
-                            $record->differentialOilChange()->create([
-                                'oil_type' => $data['oil_type'],
-                                'quantity' => $data['quantity'],
-                            ]);
-                        }
-                        if ($record->type === 'oil_change') {
-                            $record->oilChange()->create([
-                                'oil_type' => $data['oil_type'],
-                                'oil_quantity' => $data['oil_quantity'],
-                                'current_km' => $data['current_km'],
-                                'next_change_km' => $data['next_change_km'],
-                                'filter' => $data['filter'],
-                            ]);
-                        }
-                        if ($record->type === 'transmission_oil_change') {
-                            $record->transmissionOilChange()->create([
-                                'oil_type' => $data['oil_type'],
-                                'quantity' => $data['quantity'],
-                            ]);
-                        }
-                        if ($record->type === 'steering_oil_change') {
-                            $record->steeringOilChange()->create([
-                                'oil_type' => $data['oil_type'],
-                                'quantity' => $data['quantity'],
-                            ]);
-                        }
-                    }),
+                    ->after(fn ($record, $data) => $record->syncTypeDetails($data)),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

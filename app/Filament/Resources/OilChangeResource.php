@@ -38,14 +38,22 @@ class OilChangeResource extends Resource
                     ->label('Quantity (liters)')
                     ->numeric()
                     ->required(),
+                Forms\Components\Select::make('distance_unit')
+                    ->label('Unit of these readings')
+                    ->options(\App\Support\Distance::LABELS)
+                    ->selectablePlaceholder(false)
+                    ->required()
+                    ->live(),
                 Forms\Components\TextInput::make('current_km')
-                    ->label('Current KM')
+                    ->label('Current reading')
                     ->numeric()
+                    ->suffix(fn ($get) => \App\Support\Distance::suffix($get('distance_unit')))
                     ->required(),
                 Forms\Components\TextInput::make('next_change_km')
-                    ->label('Next Change KM')
+                    ->label('Next change at')
                     ->numeric()
-                    ->required(),
+                    ->suffix(fn ($get) => \App\Support\Distance::suffix($get('distance_unit')))
+                    ->helperText('Leave empty to fill it automatically (+5,000 km / +3,107 mi).'),
                 Forms\Components\TextInput::make('filter')
                     ->label('Filter Type')
                     ->placeholder('Enter filter type')
@@ -81,13 +89,13 @@ class OilChangeResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('current_km')
-                    ->label('Current KM')
-                    ->numeric()
+                    ->label('Current reading')
+                    ->formatStateUsing(fn ($state, $record) => \App\Support\Distance::format($state, $record->distance_unit))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('next_change_km')
-                    ->label('Next Change KM')
-                    ->numeric()
+                    ->label('Next change at')
+                    ->formatStateUsing(fn ($state, $record) => \App\Support\Distance::format($state, $record->distance_unit))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('filter')

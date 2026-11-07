@@ -39,6 +39,13 @@ class VehicleResource extends Resource
                     ->placeholder('Enter vehicle type')
                     ->maxLength(255)
                     ->required(),
+                Select::make('distance_unit')
+                    ->label('Odometer unit')
+                    ->options(\App\Support\Distance::LABELS)
+                    ->default('km')
+                    ->selectablePlaceholder(false)
+                    ->required()
+                    ->helperText('Changing it only affects new oil changes; old records keep their unit.'),
             ])->columns(2);
     }
 
@@ -54,11 +61,17 @@ class VehicleResource extends Resource
                     ->label('Vehicle Type')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('distance_unit')
+                    ->label('Unit')
+                    ->formatStateUsing(fn ($state) => \App\Support\Distance::suffix($state))
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('maintenanceRecords')
                     ->label('Maintenance Types')
                     ->formatStateUsing(function ($record) {
                         return $record->maintenanceRecords
                             ->pluck('type')
+                            ->map(fn ($type) => \App\Models\MaintenanceRecord::TYPE_LABELS[$type] ?? $type)
                             ->implode(', ');
                     })
                     ->wrap(),

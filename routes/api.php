@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\OilchangeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\WheelServiceController;
+use App\Http\Controllers\Api\OtherServiceController;
 use App\Http\Controllers\Api\GearOilChangeController;
 use App\Http\Controllers\Api\ResetPasswordController;
 use App\Http\Controllers\Api\BatteryServiceController;
@@ -36,6 +37,7 @@ Route::delete('/profile/delete', 'App\Http\Controllers\Api\AuthController@destro
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-vehicles', [VehicleController::class, 'mine']);
     Route::post('/my-vehicles', [VehicleController::class, 'storeMine']);
+    Route::patch('/my-vehicles/{id}', [VehicleController::class, 'updateMine']);
 });
 
 // Vehicle Routes
@@ -103,6 +105,13 @@ Route::put('/transmission-oil-changes/{id}', [TransmissionOilChangeController::c
 Route::delete('/transmission-oil-changes/{id}', [TransmissionOilChangeController::class, 'destroy']);
 
 
+
+// other (custom) service Routes
+Route::get('/other-services', [OtherServiceController::class, 'index']);
+Route::post('/other-services', [OtherServiceController::class, 'store']);
+Route::get('/other-services/{id}', [OtherServiceController::class, 'show']);
+Route::put('/other-services/{id}', [OtherServiceController::class, 'update']);
+Route::delete('/other-services/{id}', [OtherServiceController::class, 'destroy']);
 
 //forget password and Reset It
 Route::post('forgot-password', [PasswordResetlinkController::class, 'sendResetPasswordEmail']);
