@@ -60,6 +60,25 @@ class AdminPanelTest extends TestCase
         Livewire::test(MonthlyRevenueChart::class)->assertOk();
     }
 
+    public function test_records_list_shows_price_total(): void
+    {
+        $vehicle = Vehicle::create(['user_id' => $this->admin->id, 'type' => 'Hilux']);
+        foreach ([30, 25, null] as $price) {
+            MaintenanceRecord::create([
+                'vehicle_id' => $vehicle->id,
+                'maintenance_date' => now(),
+                'type' => 'oil_change',
+                'price' => $price,
+            ]);
+        }
+
+        Livewire::test(\App\Filament\Resources\MaintenanceRecordResource\Pages\ListMaintenanceRecords::class)
+            ->assertSee('$30.00')
+            ->assertSee('$25.00')
+            ->assertSee('Total')
+            ->assertSee('$55.00');
+    }
+
     public function test_admin_can_create_record_with_technician_and_price(): void
     {
         $vehicle = Vehicle::create(['user_id' => $this->admin->id, 'type' => 'Hilux']);

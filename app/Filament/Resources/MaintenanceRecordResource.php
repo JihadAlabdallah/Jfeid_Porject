@@ -224,7 +224,9 @@ class MaintenanceRecordResource extends Resource
                     ->money('USD')
                     ->placeholder('-')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    // total of the rows currently listed (follows the user filter)
+                    ->summarize(Tables\Columns\Summarizers\Sum::make()->label('Total')->money('USD')),
             ])
             ->filters([
                 Filter::make('user_id')
