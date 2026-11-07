@@ -60,7 +60,7 @@ class AuthController extends Controller
     }
     public function signin(Request $request)
     {
-        Log::info('Login request received', ['request' => $request->all()]);
+        Log::info('Login request received', ['request' => $request->except('password')]);
 
         $credentials = $request->validate([
             'name_or_email' => 'required|string',
@@ -81,6 +81,8 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => 'Logged In Successfully!',
                 'vehicle_id' => $vehicle_id,
+                // all of the user's vehicles, for clients with more than one
+                'vehicles' => $user->vehicles()->orderBy('id')->get(['id', 'type']),
                 'token' => $access_token
             ], 200);
         } else {
@@ -105,6 +107,41 @@ class AuthController extends Controller
             'data' => $request->user()
         ]);
     }
+    /**
+     * Update the signed-in user's profile (name, email, phone number, car plate,
+     * distance unit). Only the fields that are sent are changed.
+     *
+     * Route: POST /profile/update/{token}. The {token} segment is kept for
+     * compatibility with the app; authentication comes from the Bearer token.
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        // accept the spellings the app has used for the phone field
+        foreach (['Phonenumber', 'phone_number', 'phone'] as $alias) {
+            if ($request->has($alias) && ! $request->has('phonenumber')) {
+                $request->merge(['phonenumber' => $request->input($alias)]);
+            }
+        }
+
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|nullable|email|max:255|unique:users,email,' . $user->id,
+            'phonenumber' => 'sometimes|string|max:20',
+            'carplate' => 'sometimes|nullable|string|max:20',
+            'distance_unit' => 'sometimes|in:' . implode(',', User::DISTANCE_UNITS),
+        ]);
+
+        $user->update($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully.',
+            'data' => $user->fresh(),
+        ]);
+    }
+
     public function destroy(Request $request)
     {
         $user = \App\Models\User::find(Auth::id());

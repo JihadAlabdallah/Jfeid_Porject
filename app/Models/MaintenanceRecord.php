@@ -23,7 +23,12 @@ class MaintenanceRecord extends Model
         'vehicle_id',
         'maintenance_date',
         'type',
-    
+        'technician_name',
+        'price',
+    ];
+
+    protected $casts = [
+        'price' => 'float',
     ];
 
     /**

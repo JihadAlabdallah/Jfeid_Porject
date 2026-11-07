@@ -12,6 +12,8 @@ class OverviewStats extends BaseWidget
 {
     protected static string $view = 'filament.widgets.overview-stats';
 
+    protected static ?int $sort = 1;
+
     protected int | string | array $columnSpan = 'full';
 
     public function getStats(): array

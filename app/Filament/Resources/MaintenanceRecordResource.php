@@ -179,6 +179,18 @@ class MaintenanceRecordResource extends Resource
                     ->label('Maintenance Date')
                     ->required()
                     ->default(now()),
+
+                TextInput::make('technician_name')
+                    ->label('Technician / Employee')
+                    ->maxLength(255),
+
+                TextInput::make('price')
+                    ->label('Price (USD)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(99999999.99)
+                    ->step('0.01')
+                    ->prefix('$'),
             ]);
     }
 
@@ -202,6 +214,17 @@ class MaintenanceRecordResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('technician_name')
+                    ->label('Technician')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('price')
+                    ->label('Price')
+                    ->money('USD')
+                    ->placeholder('-')
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
                 Filter::make('user_id')

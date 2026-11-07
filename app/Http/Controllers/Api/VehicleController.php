@@ -27,6 +27,35 @@ class VehicleController extends Controller
     }
 
     /**
+     * GET /my-vehicles: only the signed-in user's vehicles.
+     */
+    public function mine(Request $request)
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => $request->user()->vehicles()->orderBy('id')->get(),
+        ]);
+    }
+
+    /**
+     * POST /my-vehicles: add another vehicle to the signed-in user.
+     */
+    public function storeMine(Request $request)
+    {
+        $data = $request->validate([
+            'type' => 'required|string|max:255',
+        ]);
+
+        $vehicle = $request->user()->vehicles()->create($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Vehicle created successfully.',
+            'data' => $vehicle,
+        ], 201);
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create() {}

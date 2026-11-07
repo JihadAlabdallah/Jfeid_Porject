@@ -32,6 +32,12 @@ Route::get('/profile', 'App\Http\Controllers\Api\AuthController@getProfile')->mi
 Route::delete('/profile/delete', 'App\Http\Controllers\Api\AuthController@destroy')->middleware('auth:sanctum');
 
 
+// Signed-in user's own vehicles (multiple vehicles per client)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/my-vehicles', [VehicleController::class, 'mine']);
+    Route::post('/my-vehicles', [VehicleController::class, 'storeMine']);
+});
+
 // Vehicle Routes
 Route::get('/vehicles', [VehicleController::class, 'index']);
 Route::post('/vehicles', [VehicleController::class, 'store']);

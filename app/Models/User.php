@@ -27,8 +27,11 @@ class User extends Authenticatable implements FilamentUser
         'phonenumber',
         'password',
         'carplate',
+        'distance_unit',
         'is_admin',
     ];
+
+    public const DISTANCE_UNITS = ['km', 'miles'];
 
     /**
      * The attributes that should be hidden for serialization.

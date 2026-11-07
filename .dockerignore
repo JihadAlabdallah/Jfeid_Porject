@@ -1,0 +1,10 @@
+# Keep build context small. Render builds from a git clone, where these
+# folders don't exist anyway; the Dockerfiles reinstall vendor/node_modules.
+.git
+node_modules
+vendor
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+.phpunit.result.cache
