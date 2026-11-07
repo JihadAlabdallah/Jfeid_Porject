@@ -42,6 +42,7 @@ class GearOilChangeResource extends Resource
                     ->numeric()
                     ->required(),
 
+                ...\App\Filament\Support\ParentRecordFields::formFields(),
             ]);
     }
 
@@ -74,6 +75,7 @@ class GearOilChangeResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                ...\App\Filament\Support\ParentRecordFields::tableColumns(),
             ])->filters([
                 //
             ])

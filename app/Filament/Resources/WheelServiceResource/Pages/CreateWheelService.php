@@ -8,5 +8,7 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateWheelService extends CreateRecord
 {
+    use \App\Filament\Support\SavesParentRecordFields;
+
     protected static string $resource = WheelServiceResource::class;
 }

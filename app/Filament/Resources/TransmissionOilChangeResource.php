@@ -42,6 +42,7 @@ class TransmissionOilChangeResource extends Resource
                     ->numeric()
                     ->required(),
 
+                ...\App\Filament\Support\ParentRecordFields::formFields(),
             ])->columns(2);
     }
 
@@ -74,6 +75,7 @@ class TransmissionOilChangeResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                ...\App\Filament\Support\ParentRecordFields::tableColumns(),
             ])
             ->filters([
                 //

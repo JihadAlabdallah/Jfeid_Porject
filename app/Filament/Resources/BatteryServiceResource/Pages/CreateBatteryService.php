@@ -8,6 +8,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateBatteryService extends CreateRecord
 {
+    use \App\Filament\Support\SavesParentRecordFields;
+
     protected static string $resource = BatteryServiceResource::class;
 protected function mutateFormDataBeforeCreate(array $data): array
 {

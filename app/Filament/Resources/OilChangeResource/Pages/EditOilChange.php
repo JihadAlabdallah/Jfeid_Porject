@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditOilChange extends EditRecord
 {
+    use \App\Filament\Support\SavesParentRecordFields;
+
     protected static string $resource = OilChangeResource::class;
 
     protected function getHeaderActions(): array

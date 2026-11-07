@@ -54,6 +54,7 @@ class OilChangeResource extends Resource
                     ->placeholder('Enter filter type')
                     ->maxLength(255)
                     ->required(),
+                ...\App\Filament\Support\ParentRecordFields::formFields(),
             ])->columns(2);
     }
 
@@ -100,6 +101,7 @@ class OilChangeResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                ...\App\Filament\Support\ParentRecordFields::tableColumns(),
             ])->filters([
                 //
             ])

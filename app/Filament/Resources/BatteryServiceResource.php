@@ -36,6 +36,7 @@ class BatteryServiceResource extends Resource
                     ->placeholder('Enter size')
                     ->maxLength(255)
                     ->required(),
+                ...\App\Filament\Support\ParentRecordFields::formFields(),
             ])->columns(2);
     }
 
@@ -68,6 +69,7 @@ class BatteryServiceResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                ...\App\Filament\Support\ParentRecordFields::tableColumns(),
 
             ])->filters([
                 //

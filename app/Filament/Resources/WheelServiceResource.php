@@ -49,6 +49,7 @@ class WheelServiceResource extends Resource
                     ->placeholder('Enter quantity')
                     ->numeric()
                     ->required(),
+                ...\App\Filament\Support\ParentRecordFields::formFields(),
             ])->columns(2);
     }
 
@@ -84,6 +85,7 @@ class WheelServiceResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                ...\App\Filament\Support\ParentRecordFields::tableColumns(),
             ])
             ->filters([
                 //

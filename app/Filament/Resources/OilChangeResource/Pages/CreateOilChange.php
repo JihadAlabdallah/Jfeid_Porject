@@ -8,5 +8,7 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateOilChange extends CreateRecord
 {
+    use \App\Filament\Support\SavesParentRecordFields;
+
     protected static string $resource = OilChangeResource::class;
 }

@@ -41,6 +41,7 @@ class DifferentialOilChangeResource extends Resource
                     ->label('Quantity (liters)')
                     ->numeric()
                     ->required(),
+                ...\App\Filament\Support\ParentRecordFields::formFields(),
             ])->columns(2);
     }
 
@@ -72,6 +73,7 @@ class DifferentialOilChangeResource extends Resource
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                ...\App\Filament\Support\ParentRecordFields::tableColumns(),
             ])->filters([
                 //
             ])

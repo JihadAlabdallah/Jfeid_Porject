@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditWheelService extends EditRecord
 {
+    use \App\Filament\Support\SavesParentRecordFields;
+
     protected static string $resource = WheelServiceResource::class;
 
     protected function getHeaderActions(): array
