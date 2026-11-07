@@ -163,6 +163,25 @@ class WeekendFeaturesTest extends TestCase
             ->assertJsonPath('data.price', 45.5);
     }
 
+    public function test_vehicle_history_includes_technician_and_price(): void
+    {
+        $vehicle = Vehicle::create(['user_id' => $this->user()->id, 'type' => 'Hilux']);
+        $record = MaintenanceRecord::create([
+            'vehicle_id' => $vehicle->id,
+            'maintenance_date' => '2026-11-01 10:00:00',
+            'type' => 'battery_service',
+            'technician_name' => 'Ahmed',
+            'price' => 80,
+        ]);
+        $record->batteryService()->create(['brand' => 'Bosch', 'size' => '70Ah']);
+
+        $this->getJson("/api/vehicles/{$vehicle->id}")
+            ->assertOk()
+            ->assertJsonPath('data.maintenance_records.0.maintenance.battery_service.brand', 'Bosch')
+            ->assertJsonPath('data.maintenance_records.0.maintenance.battery_service.technician_name', 'Ahmed')
+            ->assertJsonPath('data.maintenance_records.0.maintenance.battery_service.price', 80);
+    }
+
     public function test_old_records_without_price_still_work(): void
     {
         $vehicle = Vehicle::create(['user_id' => $this->user()->id, 'type' => 'Hilux']);

@@ -117,6 +117,10 @@ class VehicleController extends Controller
             $related = $record->{$relation};
             if ($related) {
                 $related->makeHidden(['created_at', 'updated_at']);
+
+                // added fields: who did the service and what it cost (null on old records)
+                $related->setAttribute('technician_name', $record->technician_name);
+                $related->setAttribute('price', $record->price);
             }
         }
 
