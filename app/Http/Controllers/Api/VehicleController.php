@@ -151,6 +151,11 @@ class VehicleController extends Controller
                 // added fields: who did the service and what it cost (null on old records)
                 $related->setAttribute('technician_name', $record->technician_name);
                 $related->setAttribute('price', $record->price);
+
+                // odometer at the service, in the unit it was entered in (reading may be null)
+                foreach ($record->reading() as $key => $value) {
+                    $related->setAttribute($key, $value);
+                }
             }
         }
 

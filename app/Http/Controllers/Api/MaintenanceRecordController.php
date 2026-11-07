@@ -51,6 +51,8 @@ class MaintenanceRecordController extends Controller
             'vehicle_id' => 'required|exists:vehicles,id',
             'maintenance_date' => 'required|date',
             'type' => 'required|string|max:255',
+            // optional odometer reading, saved in the car's unit
+            'current_reading' => 'nullable|integer|min:0|max:4294967295',
 
         ]);
 
@@ -59,6 +61,7 @@ class MaintenanceRecordController extends Controller
             'vehicle_id' => $request->vehicle_id,
             'maintenance_date' => $request->maintenance_date,
             'type' => $request->type,
+            'current_reading' => $request->current_reading,
 
         ]);
 
@@ -106,12 +109,14 @@ class MaintenanceRecordController extends Controller
             'vehicle_id' => 'required|exists:vehicles,id',
             'maintenance_date' => 'required|date',
             'type' => 'required|string|max:255',
+            // optional odometer reading, saved in the car's unit
+            'current_reading' => 'nullable|integer|min:0|max:4294967295',
         ]);
 
         // Fetch the specific maintenance record by
         $maintenanceRecord =  MaintenanceRecord::findOrFail($id);
         // Update the maintenance record with the provided data
-        $maintenanceRecord->update($request->only(['vehicle_id', 'maintenance_date', 'type']));
+        $maintenanceRecord->update($request->only(['vehicle_id', 'maintenance_date', 'type', 'current_reading']));
         // Return the updated maintenance record as a JSON response 
 
         return response()->json([

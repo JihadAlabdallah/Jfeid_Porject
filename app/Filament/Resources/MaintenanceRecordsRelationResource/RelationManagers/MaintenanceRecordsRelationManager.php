@@ -88,6 +88,10 @@ class MaintenanceRecordsRelationManager extends RelationManager
                         ?? $livewire->getOwnerRecord()->distance_unit
                 ),
                 ...\App\Filament\Support\ServiceFormFields::other(),
+                \App\Filament\Support\ServiceFormFields::reading(
+                    fn ($get, $record, $livewire) => $record?->distance_unit
+                        ?? $livewire->getOwnerRecord()->distance_unit
+                ),
                 Forms\Components\TextInput::make('filter')
                     ->label('Filter Type')
                     ->visible(fn($get) => $get('type') === 'oil_change')

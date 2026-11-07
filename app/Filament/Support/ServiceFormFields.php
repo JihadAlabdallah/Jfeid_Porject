@@ -53,6 +53,24 @@ class ServiceFormFields
         ];
     }
 
+    /**
+     * Odometer reading for every type except Oil Change (which has its own
+     * Current reading / Next change fields). Saved on the record.
+     *
+     * @param  Closure(Get, mixed, mixed): ?string  $unit  resolves the unit from ($get, $record, $livewire)
+     */
+    public static function reading(Closure $unit): TextInput
+    {
+        return TextInput::make('current_reading')
+            ->label('Current reading')
+            ->numeric()
+            ->minValue(0)
+            ->maxValue(4294967295)
+            ->suffix(fn (Get $get, $record, $livewire) => Distance::suffix($unit($get, $record, $livewire)))
+            ->helperText('Odometer at the time of the service (optional).')
+            ->visible(fn (Get $get) => filled($get('type')) && $get('type') !== 'oil_change');
+    }
+
     /** Fields of the "Other" type. Price and employee are the record's own fields. */
     public static function other(): array
     {

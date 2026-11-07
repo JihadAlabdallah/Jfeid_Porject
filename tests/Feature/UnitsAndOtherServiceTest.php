@@ -436,6 +436,158 @@ class UnitsAndOtherServiceTest extends TestCase
             ->assertJsonPath('data.name', 'Wiper blades');
     }
 
+    // ---- current reading on every type ----
+
+    public function test_admin_saves_a_reading_on_a_steering_oil_change_in_the_cars_unit(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle('miles');
+
+        Livewire::test(CreateMaintenanceRecord::class)
+            ->fillForm([
+                'user_id' => $this->admin->id,
+                'vehicle_id' => $vehicle->id,
+                'type' => 'steering_oil_change',
+                'oil_type' => 'ATF',
+                'quantity' => '1',
+                'current_reading' => '40000',
+                'maintenance_date' => now()->toDateTimeString(),
+            ])
+            ->assertFormFieldIsVisible('current_reading')
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $record = MaintenanceRecord::latest('id')->first();
+        $this->assertSame(40000, $record->current_reading);
+        $this->assertSame('miles', $record->distance_unit);
+
+        // switching the car later doesn't change the saved record
+        $vehicle->update(['distance_unit' => 'km']);
+        $this->assertSame('miles', $record->fresh()->distance_unit);
+    }
+
+    public function test_reading_is_optional_and_hidden_for_oil_changes(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle();
+
+        Livewire::test(CreateMaintenanceRecord::class)
+            ->fillForm(['type' => 'oil_change'])
+            ->assertFormFieldIsHidden('current_reading')
+            ->assertFormFieldIsVisible('current_km');
+
+        Livewire::test(CreateMaintenanceRecord::class)
+            ->fillForm([
+                'user_id' => $this->admin->id,
+                'vehicle_id' => $vehicle->id,
+                'type' => 'battery_service',
+                'brand' => 'Bosch',
+                'size' => '70Ah',
+                'maintenance_date' => now()->toDateTimeString(),
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $record = MaintenanceRecord::latest('id')->first();
+        $this->assertNull($record->current_reading);
+        $this->assertNull($record->distance_unit);
+    }
+
+    public function test_detail_edit_page_shows_and_saves_the_reading(): void
+    {
+        $this->admin();
+        $record = $this->record($this->vehicle('miles'), 'steering_oil_change');
+        $record->update(['current_reading' => 30000]);
+        $steering = $record->steeringOilChange()->create(['oil_type' => 'ATF', 'quantity' => 1]);
+
+        Livewire::test(\App\Filament\Resources\SteeringOilChangeResource\Pages\EditSteeringOilChange::class, ['record' => $steering->getRouteKey()])
+            ->assertFormSet(['current_reading' => 30000])
+            ->fillForm(['current_reading' => '31000'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(31000, $record->fresh()->current_reading);
+        $this->assertSame('miles', $record->fresh()->distance_unit);
+
+        $this->get(\App\Filament\Resources\SteeringOilChangeResource::getUrl('index'))
+            ->assertOk()
+            ->assertSee('31,000 mi');
+    }
+
+    public function test_oil_change_edit_page_leaves_the_record_reading_alone(): void
+    {
+        $this->admin();
+        $record = $this->record($this->vehicle());
+        $oil = OilChange::create(['record_id' => $record->id, 'current_km' => '52000', 'oil_type' => '5W', 'oil_quantity' => '4', 'filter' => 'OEM']);
+
+        Livewire::test(\App\Filament\Resources\OilChangeResource\Pages\EditOilChange::class, ['record' => $oil->getRouteKey()])
+            ->assertFormFieldDoesNotExist('current_reading')
+            ->fillForm(['price' => '30'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertNull($record->fresh()->current_reading);
+        $this->assertSame(30.0, $record->fresh()->price);
+    }
+
+    public function test_records_list_shows_readings_for_every_type(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle('miles');
+        $steering = $this->record($vehicle, 'steering_oil_change');
+        $steering->update(['current_reading' => 30000]);
+        OilChange::create(['record_id' => $this->record($vehicle)->id, 'current_km' => '40000']);
+
+        Livewire::test(\App\Filament\Resources\MaintenanceRecordResource\Pages\ListMaintenanceRecords::class)
+            ->assertSee('30,000 mi')
+            ->assertSee('40,000 mi');
+    }
+
+    public function test_history_api_gives_every_service_a_reading_and_unit(): void
+    {
+        $vehicle = $this->vehicle('miles');
+        $steering = $this->record($vehicle, 'steering_oil_change');
+        $steering->update(['current_reading' => 30000, 'maintenance_date' => '2026-11-01 10:00:00']);
+        $steering->steeringOilChange()->create(['oil_type' => 'ATF', 'quantity' => 1]);
+
+        $oilRecord = $this->record($vehicle);
+        OilChange::create(['record_id' => $oilRecord->id, 'current_km' => '40000']);
+
+        $battery = $this->record($vehicle, 'battery_service');
+        $battery->update(['maintenance_date' => '2026-11-09 10:00:00']);
+        $battery->batteryService()->create(['brand' => 'Bosch', 'size' => '70Ah']);
+
+        $this->getJson("/api/vehicles/{$vehicle->id}")
+            ->assertOk()
+            ->assertJsonPath('data.maintenance_records.0.maintenance.steering_oil_change.current_reading', 30000)
+            ->assertJsonPath('data.maintenance_records.0.maintenance.steering_oil_change.distance_unit', 'miles')
+            ->assertJsonPath('data.maintenance_records.1.maintenance.oil_change.current_reading', 40000)
+            ->assertJsonPath('data.maintenance_records.1.maintenance.oil_change.distance_unit', 'miles')
+            ->assertJsonPath('data.maintenance_records.2.maintenance.battery_service.current_reading', null)
+            ->assertJsonPath('data.maintenance_records.2.maintenance.battery_service.distance_unit', 'miles');
+    }
+
+    public function test_app_can_send_a_reading_with_a_maintenance_record(): void
+    {
+        $vehicle = $this->vehicle('miles');
+
+        $this->postJson('/api/maintenance-records', [
+            'vehicle_id' => $vehicle->id,
+            'maintenance_date' => '2026-11-08 09:00:00',
+            'type' => 'wheel_service',
+            'current_reading' => 25000,
+        ])->assertCreated()
+            ->assertJsonPath('data.current_reading', 25000)
+            ->assertJsonPath('data.distance_unit', 'miles');
+
+        $this->postJson('/api/maintenance-records', [
+            'vehicle_id' => $vehicle->id,
+            'maintenance_date' => '2026-11-08 09:00:00',
+            'type' => 'wheel_service',
+            'current_reading' => -5,
+        ])->assertUnprocessable();
+    }
+
     public function test_existing_types_still_work_unchanged(): void
     {
         $vehicle = $this->vehicle();

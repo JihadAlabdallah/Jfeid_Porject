@@ -33,7 +33,11 @@ trait SavesParentRecordFields
         $values = [];
 
         foreach (ParentRecordFields::FIELDS as $field) {
-            $value = $this->data[$field] ?? null;
+            if (! array_key_exists($field, $this->data)) {
+                continue;
+            }
+
+            $value = $this->data[$field];
             $value = $value === '' ? null : $value;
 
             if ($onlyFilled && $value === null) {

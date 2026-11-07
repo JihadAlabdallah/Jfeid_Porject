@@ -2,11 +2,12 @@
 
 namespace App\Filament\Support;
 
+use App\Support\Distance;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 
 /**
- * Technician + price fields for the detail pages (Oil Changes, Battery
+ * Current reading, technician + price fields for the detail pages (Oil Changes, Battery
  * Services, ...). The values live on the parent maintenance record, so the
  * fields are not saved on the detail row itself: they are loaded from the
  * selected maintenance record and written back to it by
@@ -14,11 +15,30 @@ use Filament\Tables\Columns\TextColumn;
  */
 class ParentRecordFields
 {
-    public const FIELDS = ['technician_name', 'price'];
+    public const FIELDS = ['current_reading', 'technician_name', 'price'];
 
-    public static function formFields(): array
+    /** Unit shown next to a reading: the record's own, else its car's. */
+    public static function unitOf($maintenanceRecord): string
     {
+        return Distance::suffix($maintenanceRecord?->distance_unit ?? $maintenanceRecord?->vehicle?->distance_unit);
+    }
+
+    /**
+     * @param  bool  $withReading  false on Oil Changes, which have their own readings
+     */
+    public static function formFields(bool $withReading = true): array
+    {
+        $reading = TextInput::make('current_reading')
+            ->label('Current reading')
+            ->numeric()
+            ->minValue(0)
+            ->maxValue(4294967295)
+            ->suffix(fn ($record) => self::unitOf($record?->maintenanceRecord))
+            ->dehydrated(false)
+            ->afterStateHydrated(fn (TextInput $component, $record) => $component->state($record?->maintenanceRecord?->current_reading));
+
         return [
+            ...($withReading ? [$reading] : []),
             TextInput::make('technician_name')
                 ->label('Technician / Employee')
                 ->maxLength(255)
@@ -37,9 +57,16 @@ class ParentRecordFields
         ];
     }
 
-    public static function tableColumns(): array
+    public static function tableColumns(bool $withReading = true): array
     {
+        $reading = TextColumn::make('maintenanceRecord.current_reading')
+            ->label('Reading')
+            ->formatStateUsing(fn ($state, $record) => Distance::format($state, $record->maintenanceRecord?->distance_unit ?? $record->maintenanceRecord?->vehicle?->distance_unit))
+            ->placeholder('-')
+            ->toggleable();
+
         return [
+            ...($withReading ? [$reading] : []),
             TextColumn::make('maintenanceRecord.technician_name')
                 ->label('Technician')
                 ->placeholder('-')

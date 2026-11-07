@@ -11,6 +11,7 @@ use App\Models\BatteryService;
 use App\Models\SteeringOilChange;
 use App\Models\DifferentialOilChange;
 use App\Models\TransmissionOilChange;
+use App\Support\Distance;
 use Illuminate\Database\Eloquent\Model;
 
 class MaintenanceRecord extends Model
@@ -26,11 +27,48 @@ class MaintenanceRecord extends Model
         'type',
         'technician_name',
         'price',
+        'current_reading',
+        'distance_unit',
     ];
 
     protected $casts = [
         'price' => 'float',
+        'current_reading' => 'integer',
     ];
+
+    /**
+     * A reading is saved in the car's unit at the time of the service, so
+     * switching the car between km and miles later never changes it.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (MaintenanceRecord $record) {
+            if ($record->current_reading !== null && blank($record->distance_unit)) {
+                $record->distance_unit = Distance::normalize($record->vehicle()->first()?->distance_unit);
+            }
+        });
+    }
+
+    /**
+     * Odometer reading of this service for the app: oil changes keep theirs
+     * on the oil change, every other type on the record.
+     *
+     * @return array{current_reading: ?int, distance_unit: string}
+     */
+    public function reading(): array
+    {
+        if ($this->type === 'oil_change' && $this->oilChange) {
+            return [
+                'current_reading' => $this->current_reading ?? Distance::parse($this->oilChange->current_km),
+                'distance_unit' => Distance::normalize($this->oilChange->distance_unit),
+            ];
+        }
+
+        return [
+            'current_reading' => $this->current_reading,
+            'distance_unit' => Distance::normalize($this->distance_unit ?? $this->vehicle?->distance_unit),
+        ];
+    }
 
     /**
      * Maps each maintenance type to its detail relation and the form fields
