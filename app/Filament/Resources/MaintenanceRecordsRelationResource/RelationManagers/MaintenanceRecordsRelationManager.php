@@ -114,6 +114,17 @@ class MaintenanceRecordsRelationManager extends RelationManager
                     ->numeric()
                     ->visible(fn($get) => $get('type') === 'steering_oil_change')
                     ->required(fn($get) => $get('type') === 'steering_oil_change'),
+                // who did the service and what it cost (same as Maintenance Records)
+                Forms\Components\TextInput::make('technician_name')
+                    ->label('Technician / Employee')
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('price')
+                    ->label('Price (USD)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(99999999.99)
+                    ->step('0.01')
+                    ->prefix('$'),
             ])->columns(2);
     }
     public function table(Table $table): Table
@@ -127,12 +138,37 @@ class MaintenanceRecordsRelationManager extends RelationManager
                     ->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Maintenance Type')
+                    ->formatStateUsing(fn ($state) => \App\Models\MaintenanceRecord::TYPE_LABELS[$state] ?? $state)
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('maintenance_date')
                     ->dateTime()
                     ->label('Maintenance Date')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('current_reading')
+                    ->label('Reading')
+                    ->getStateUsing(fn ($record) => $record->reading()['current_reading'])
+                    ->formatStateUsing(fn ($state, $record) => \App\Support\Distance::format($state, $record->reading()['distance_unit']))
+                    ->placeholder('-')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('next_change_reading')
+                    ->label('Next change')
+                    ->getStateUsing(fn ($record) => $record->reading()['next_change_reading'])
+                    ->formatStateUsing(fn ($state, $record) => \App\Support\Distance::format($state, $record->reading()['distance_unit']))
+                    ->placeholder('-')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('technician_name')
+                    ->label('Technician')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('price')
+                    ->label('Price')
+                    ->money('USD')
+                    ->placeholder('-')
+                    ->sortable()
+                    ->toggleable()
+                    ->summarize(Tables\Columns\Summarizers\Sum::make()->label('Total')->money('USD')),
             ])
             ->filters([
                 //
@@ -142,7 +178,11 @@ class MaintenanceRecordsRelationManager extends RelationManager
                     ->after(fn ($record, $data) => $record->syncTypeDetails($data)),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                // same as the Maintenance Records edit page: open with the
+                // details (oil type, brand, ...) filled in and save them back
+                Tables\Actions\EditAction::make()
+                    ->mutateRecordDataUsing(fn (array $data, $record) => $record->typeDetailValues() + $data)
+                    ->after(fn ($record, $data) => $record->syncTypeDetails($data)),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

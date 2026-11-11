@@ -34,7 +34,7 @@ class VehicleController extends Controller
     {
         return response()->json([
             'status' => 'success',
-            'data' => $request->user()->vehicles()->orderBy('id')->get(),
+            'data' => Vehicle::summariesFor($request->user()),
         ]);
     }
 
@@ -45,6 +45,7 @@ class VehicleController extends Controller
     {
         $data = $request->validate([
             'type' => 'required|string|max:255',
+            'carplate' => 'sometimes|nullable|string|max:20',
             'distance_unit' => 'sometimes|in:' . implode(',', Distance::UNITS),
         ]);
 
@@ -53,7 +54,7 @@ class VehicleController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Vehicle created successfully.',
-            'data' => $vehicle,
+            'data' => $vehicle->fresh()->summary(),
         ], 201);
     }
 
@@ -72,6 +73,7 @@ class VehicleController extends Controller
 
         $data = $request->validate([
             'type' => 'sometimes|string|max:255',
+            'carplate' => 'sometimes|nullable|string|max:20',
             'distance_unit' => 'sometimes|in:' . implode(',', Distance::UNITS),
         ]);
 
@@ -80,7 +82,7 @@ class VehicleController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Vehicle updated successfully.',
-            'data' => $vehicle->fresh(),
+            'data' => $vehicle->fresh()->summary(),
         ]);
     }
 
@@ -98,11 +100,13 @@ class VehicleController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'type' => 'required|string|max:255',
+            'carplate' => 'sometimes|nullable|string|max:20',
         ]);
 
         $vehicle = Vehicle::create([ 
             'user_id' => $request->user_id,
             'type' => $request->type,
+            'carplate' => $request->carplate,
         ]);
 
         // Return the created vehicle as a JSON response
@@ -182,6 +186,8 @@ class VehicleController extends Controller
             'id' => $vehicle->id,
             'user_id' => $vehicle->user_id,
             'type' => $vehicle->type,
+            'carplate' => $vehicle->carplate,
+            'current_reading' => $vehicle->currentReading(),
             'distance_unit' => $vehicle->distance_unit,
             'user' => $vehicle->user,
             'maintenance_records' => array_values($grouped)

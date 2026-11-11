@@ -105,9 +105,10 @@ class WeekendFeaturesTest extends TestCase
 
         $this->postJson('/api/my-vehicles', ['type' => 'Land Cruiser'])
             ->assertCreated()
-            ->assertJsonPath('data.user_id', $me->id);
+            ->assertJsonPath('data.type', 'Land Cruiser');
 
         $this->assertSame(2, $me->vehicles()->count());
+        $this->assertSame($me->id, Vehicle::where('type', 'Land Cruiser')->value('user_id'));
     }
 
     public function test_my_vehicles_requires_login(): void

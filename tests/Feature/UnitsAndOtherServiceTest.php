@@ -279,6 +279,85 @@ class UnitsAndOtherServiceTest extends TestCase
         $this->assertSame('23107', (string) $oil->next_change_km);
     }
 
+    public function test_car_page_record_form_saves_technician_and_price_and_lists_them(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle();
+
+        $component = Livewire::test(MaintenanceRecordsRelationManager::class, [
+            'ownerRecord' => $vehicle,
+            'pageClass' => EditVehicle::class,
+        // fields missing from the form would be dropped, so saving proves they're there
+        ])->callTableAction('create', data: [
+                'type' => 'steering_oil_change',
+                'maintenance_date' => now()->toDateTimeString(),
+                'current_reading' => 10000,
+                'oil_type' => 'ATF',
+                'quantity' => 1,
+                'technician_name' => 'wassim',
+                'price' => 25.5,
+            ])->assertHasNoTableActionErrors();
+
+        $record = $vehicle->maintenanceRecords()->first();
+        $this->assertSame('wassim', $record->technician_name);
+        $this->assertSame(25.5, $record->price);
+        $this->assertSame(70000, $record->next_change_reading);
+        $this->assertSame('ATF', $record->steeringOilChange->oil_type);
+
+        $component->assertCanSeeTableRecords([$record])
+            ->assertTableColumnStateSet('technician_name', 'wassim', $record)
+            ->assertTableColumnStateSet('price', 25.5, $record)
+            ->assertSee('Steering Oil Change');
+
+        // negative price is refused here too
+        Livewire::test(MaintenanceRecordsRelationManager::class, [
+            'ownerRecord' => $vehicle,
+            'pageClass' => EditVehicle::class,
+        ])->callTableAction('create', data: [
+            'type' => 'battery_service',
+            'maintenance_date' => now()->toDateTimeString(),
+            'brand' => 'Bosch',
+            'size' => '70',
+            'price' => -5,
+        ])->assertHasTableActionErrors(['price']);
+    }
+
+    public function test_car_page_edit_opens_with_details_and_saves_them(): void
+    {
+        $this->admin();
+        $vehicle = $this->vehicle();
+        $page = ['ownerRecord' => $vehicle, 'pageClass' => EditVehicle::class];
+
+        $steering = $this->record($vehicle, 'steering_oil_change');
+        $steering->update(['technician_name' => 'ali', 'price' => 10]);
+        \App\Models\SteeringOilChange::create(['record_id' => $steering->id, 'oil_type' => 'ATF', 'quantity' => 1]);
+
+        Livewire::test(MaintenanceRecordsRelationManager::class, $page)
+            ->mountTableAction('edit', $steering)
+            ->assertTableActionDataSet(['oil_type' => 'ATF', 'quantity' => 1, 'technician_name' => 'ali'])
+            ->setTableActionData(['oil_type' => 'Dexron', 'quantity' => 2, 'price' => 99])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $steering->refresh();
+        $this->assertSame(99.0, $steering->price);
+        $this->assertSame('Dexron', $steering->steeringOilChange->oil_type);
+        $this->assertSame(1, \App\Models\SteeringOilChange::count()); // updated, not duplicated
+
+        $oil = $this->record($vehicle, 'oil_change');
+        OilChange::create(['record_id' => $oil->id, 'current_km' => '20000', 'oil_type' => '5W-30', 'oil_quantity' => '4', 'filter' => 'OEM']);
+
+        Livewire::test(MaintenanceRecordsRelationManager::class, $page)
+            ->mountTableAction('edit', $oil)
+            ->assertTableActionDataSet(['current_km' => '20000', 'oil_type' => '5W-30', 'filter' => 'OEM'])
+            ->setTableActionData(['filter' => 'Bosch'])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame('Bosch', $oil->fresh()->oilChange->filter);
+        $this->assertSame('20000', (string) $oil->fresh()->oilChange->current_km);
+    }
+
     public function test_oil_changes_page_shows_readings_with_their_unit(): void
     {
         $this->admin();

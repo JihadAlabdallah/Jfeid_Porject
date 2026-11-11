@@ -140,6 +140,29 @@ class MaintenanceRecord extends Model
     ];
 
     /**
+     * The type-specific values (oil_type, brand, ...) from the detail row, so
+     * an edit form opens filled in. Empty when there is no detail row yet.
+     *
+     * @return array<string, mixed>
+     */
+    public function typeDetailValues(): array
+    {
+        $detail = self::TYPE_DETAILS[$this->type] ?? null;
+        $related = $detail ? $this->{$detail['relation']} : null;
+
+        if ($related === null) {
+            return [];
+        }
+
+        $values = [];
+        foreach ($detail['fields'] as $field) {
+            $values[$field] = $related->{$field};
+        }
+
+        return $values;
+    }
+
+    /**
      * Persist the type-specific detail row (wheel service, oil change, ...)
      * from submitted form data. Safe to call on both create and update.
      *

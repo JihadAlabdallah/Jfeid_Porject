@@ -39,6 +39,10 @@ class VehicleResource extends Resource
                     ->placeholder('Enter vehicle type')
                     ->maxLength(255)
                     ->required(),
+                TextInput::make('carplate')
+                    ->label('Car Plate')
+                    ->placeholder('e.g. G112233')
+                    ->maxLength(20),
                 Select::make('distance_unit')
                     ->label('Odometer unit')
                     ->options(\App\Support\Distance::LABELS)
@@ -59,6 +63,11 @@ class VehicleResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Vehicle Type')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('carplate')
+                    ->label('Car Plate')
+                    ->placeholder('-')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('distance_unit')

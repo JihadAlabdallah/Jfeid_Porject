@@ -39,6 +39,7 @@ class AuthController extends Controller
         $vehicle = Vehicle::create([
             'user_id' => $user->id,
             'type'    => $request->vehicle_type ?: 'My Vehicle',
+            'carplate' => $request->carplate,
         ]);
 
 
@@ -75,14 +76,15 @@ class AuthController extends Controller
             $access_token = $user->createToken("authToken")->plainTextToken;
 
             // get first vehicle id - default to 0 if user has no vehicles (for mobile app type safety)
-            $vehicle_id = $user->vehicles()->first()?->id ?? 0;
+            // (oldest car, so it is always the same one and matches vehicles[0])
+            $vehicle_id = $user->vehicles()->orderBy('id')->first()?->id ?? 0;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Logged In Successfully!',
                 'vehicle_id' => $vehicle_id,
                 // all of the user's vehicles, for clients with more than one
-                'vehicles' => $user->vehicles()->orderBy('id')->get(['id', 'type', 'distance_unit']),
+                'vehicles' => Vehicle::summariesFor($user),
                 'token' => $access_token
             ], 200);
         } else {
@@ -101,10 +103,12 @@ class AuthController extends Controller
     }
     public function getProfile(Request $request)
     {
-        // Return the authenticated user's profile
+        // Return the authenticated user's profile, with their cars
+        $user = $request->user();
+
         return response()->json([
             'status' => 'success',
-            'data' => $request->user()
+            'data' => $user->toArray() + ['vehicles' => Vehicle::summariesFor($user)],
         ]);
     }
     /**
@@ -133,6 +137,12 @@ class AuthController extends Controller
         ]);
 
         $user->update($data);
+
+        // the current app edits the plate on the profile: keep it on the car
+        // too when the client has only one car
+        if (array_key_exists('carplate', $data) && $user->vehicles()->count() === 1) {
+            $user->vehicles()->first()->update(['carplate' => $data['carplate']]);
+        }
 
         return response()->json([
             'status' => 'success',
