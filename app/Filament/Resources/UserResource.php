@@ -6,15 +6,11 @@ use App\Models\User;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use Google\Client as GoogleClient;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Filament\Forms\Components\Select;
 use Filament\Tables\Actions\BulkAction;
-use Filament\Notifications\Notification;
 use App\Filament\Resources\UserResource\Pages;
-use App\Models\Notification as NotificationModel;
+use App\Filament\Support\SendNotification;
 use Filament\Forms\Components\{TextInput, Toggle};
 use Filament\Tables\Columns\{TextColumn, IconColumn};
 
@@ -72,65 +68,29 @@ class UserResource extends Resource
                     ]),
                 TextColumn::make('carplate')->label('Car Plate'),
                 TextColumn::make('phonenumber')->label('Phone Number'),
+                // has a phone registered for push notifications (new app version)
+                IconColumn::make('device_tokens_exists')
+                    ->label('App')
+                    ->getStateUsing(fn (User $record) => $record->deviceTokens()->exists())
+                    ->boolean()
+                    ->tooltip(fn ($state) => $state ? 'Can receive notifications' : 'No phone registered yet'),
                 TextColumn::make('created_at')->dateTime(),
             ])
             ->bulkActions([
+                // sends only to the selected customers' phones (it used to go to everyone)
                 BulkAction::make('send-notification')
                     ->label('Send Notification')
                     ->icon('heroicon-o-paper-airplane')
-                    ->form([
-                        Select::make('topic')->options([
-                            'all_users' => 'All Users',
-                        ])->rules('required'),
-                        TextInput::make('title')->required(),
-                        TextInput::make('body')->required(),
-                    ])
-                    ->action(function (Collection $records, array $data) {
-                        try {
-                            $firebaseConfig = self::getFirebaseConfig();
-                            $client = self::buildFirebaseClient($firebaseConfig);
-                            $tokenData = $client->fetchAccessTokenWithAssertion();
-                            $accessToken = $tokenData['access_token'] ?? null;
-                            if (!is_string($accessToken) || $accessToken === '') {
-                                throw new \RuntimeException('Failed to fetch Firebase access token.');
-                            }
-
-                            $payload = [
-                                'message' => [
-                                    'topic' => $data['topic'],
-                                    'notification' => [
-                                        'title' => $data['title'],
-                                        'body' => $data['body'],
-                                    ],
-                                ],
-                            ];
-
-                            $projectId = (string) ($firebaseConfig['project_id'] ?? '');
-                            if ($projectId === '') {
-                                throw new \RuntimeException('Firebase project_id is missing in FIREBASE_CREDENTIALS.');
-                            }
-                            $response = Http::withToken($accessToken)
-                                ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", $payload);
-
-                            NotificationModel::create([
-                                'topic' => $data['topic'],
-                                'title' => $data['title'],
-                                'body' => $data['body'],
-                                'response' => $response->json(),
-                            ]);
-
-                            Notification::make()
-                                ->title($response->successful() ? 'Notification Sent' : 'Failed to Send')
-                                ->{$response->successful() ? 'success' : 'danger'}()
-                                ->send();
-                        } catch (\Exception $e) {
-                            Notification::make()
-                                ->title('Error Sending Notification')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
+                    ->modalHeading('Send a notification to the selected customers')
+                    ->modalDescription(fn (Collection $records) => SendNotification::reachText($records->modelKeys()))
+                    ->modalSubmitActionLabel('Send')
+                    ->form(SendNotification::messageFields())
+                    ->deselectRecordsAfterCompletion()
+                    ->action(fn (Collection $records, array $data) => SendNotification::send(
+                        $records->modelKeys(),
+                        $data['title'],
+                        $data['body'],
+                    )),
             ]);
     }
 
@@ -141,34 +101,5 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
-    }
-
-    protected static function getFirebaseConfig(): array
-    {
-        $credentialsBase64 = (string) config('services.firebase.credentials');
-        if ($credentialsBase64 === '') {
-            throw new \RuntimeException('FIREBASE_CREDENTIALS is not configured.');
-        }
-
-        $decodedCredentials = base64_decode($credentialsBase64, true);
-        if ($decodedCredentials === false) {
-            throw new \RuntimeException('FIREBASE_CREDENTIALS must be valid base64.');
-        }
-
-        $credentials = json_decode($decodedCredentials, true);
-        if (!is_array($credentials)) {
-            throw new \RuntimeException('FIREBASE_CREDENTIALS must decode to valid JSON.');
-        }
-
-        return $credentials;
-    }
-
-    protected static function buildFirebaseClient(array $credentials): GoogleClient
-    {
-        $client = new GoogleClient();
-        $client->setAuthConfig($credentials);
-        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-
-        return $client;
     }
 }

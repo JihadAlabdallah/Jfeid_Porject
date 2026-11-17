@@ -38,6 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-vehicles', [VehicleController::class, 'mine']);
     Route::post('/my-vehicles', [VehicleController::class, 'storeMine']);
     Route::patch('/my-vehicles/{id}', [VehicleController::class, 'updateMine']);
+
+    // phones that can receive push notifications (sent by the app after login / on logout)
+    Route::post('/device-tokens', [\App\Http\Controllers\Api\DeviceTokenController::class, 'store']);
+    Route::delete('/device-tokens', [\App\Http\Controllers\Api\DeviceTokenController::class, 'destroy']);
 });
 
 // Vehicle Routes
@@ -119,7 +123,8 @@ Route::post('/password-reset/{token}', [ResetPasswordController::class, 'reset']
 
 
 // Notification Routes
-Route::post('/send-notification', [NotificationController::class, 'sendNotificationV1']);
+// admins only (was open to anyone)
+Route::post('/send-notification', [NotificationController::class, 'sendNotificationV1'])->middleware('auth:sanctum');
 
 
 // Policies Routes

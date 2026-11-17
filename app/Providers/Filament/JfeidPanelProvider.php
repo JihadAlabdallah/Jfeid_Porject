@@ -6,6 +6,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\Widgets;
 use Filament\PanelProvider;
+use Filament\View\PanelsRenderHook;
 use Filament\Support\Colors\Color;
 use App\Filament\Widgets\OverviewStats;
 use Filament\Http\Middleware\Authenticate;
@@ -28,6 +29,8 @@ class JfeidPanelProvider extends PanelProvider
             ->id('jfeid')
             ->path('Jfeid')
             ->login()
+            // name on the login page, top bar and browser tab (instead of APP_NAME "Laravel")
+            ->brandName('Jfeid')
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -53,7 +56,12 @@ class JfeidPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            // send-notification icon in the top bar, on every page
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => view('filament.send-notification-button')->render(),
+            );
     }
     public function boot(): void
     {

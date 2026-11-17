@@ -10,11 +10,11 @@ class SendWeeklyReminder extends Command
 {
     public const TOPIC = 'all_users';
     public const TITLE = 'Time to check your car';
-    public const BODY = 'Time to check your car! Open the app to see your maintenance schedule.';
+    public const BODY = 'Check your car and oil levels today. Open the app to see when your next service is due.';
 
     protected $signature = 'notifications:weekly-reminder {--force : Send even if one was sent in the last 6 days}';
 
-    protected $description = 'Send the weekly "Time to check your car" push notification to all users';
+    protected $description = 'Send the weekly "check your car and oil" push notification to all users (Mondays)';
 
     public function handle(FcmService $fcm): int
     {
@@ -38,6 +38,7 @@ class SendWeeklyReminder extends Command
 
         Notification::create([
             'topic' => self::TOPIC,
+            'audience' => 'all',
             'title' => self::TITLE,
             'body' => self::BODY,
             'response' => $result['response'],

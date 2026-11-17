@@ -99,6 +99,11 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $user->currentAccessToken()->delete();
+
+        // optional: the phone's Firebase token, so it stops getting this customer's messages
+        if (is_string($request->input('device_token')) && $request->input('device_token') !== '') {
+            $user->deviceTokens()->where('token', $request->input('device_token'))->delete();
+        }
         return response()->json(['message' => 'Successfully logged out']);
     }
     public function getProfile(Request $request)

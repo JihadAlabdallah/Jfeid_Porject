@@ -12,7 +12,10 @@ class NotificationController extends Controller
 {
     public function sendNotificationV1(Request $request)
     {
-       
+        if (! $request->user()?->is_admin) {
+            return response()->json(['error' => 'Only admins can send notifications.'], 403);
+        }
+
         $request->validate([
             'topic' => 'required|string',
             'title' => 'required|string',

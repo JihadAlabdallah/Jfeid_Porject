@@ -229,7 +229,9 @@ class WeekendFeaturesTest extends TestCase
         $this->assertCount(1, $fcm->sent);
         $this->assertSame('all_users', $fcm->sent[0]['topic']);
         $this->assertSame('Time to check your car', $fcm->sent[0]['title']);
+        $this->assertStringContainsString('car and oil', $fcm->sent[0]['body']);
         $this->assertSame(1, Notification::count());
+        $this->assertSame('all', Notification::first()->audience);
     }
 
     public function test_weekly_reminder_is_not_sent_twice_in_a_week(): void
@@ -247,7 +249,9 @@ class WeekendFeaturesTest extends TestCase
         $events = collect(app(Schedule::class)->events())
             ->filter(fn ($e) => str_contains((string) $e->command, 'notifications:weekly-reminder'));
 
+        // every Monday at 10:00 Lebanon time
         $this->assertCount(1, $events);
-        $this->assertSame('0 10 * * 6', $events->first()->expression);
+        $this->assertSame('0 10 * * 1', $events->first()->expression);
+        $this->assertSame('Asia/Beirut', $events->first()->timezone);
     }
 }

@@ -58,6 +58,12 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Vehicle::class);
     }
 
+    /** Phones of this customer that can receive push notifications. */
+    public function deviceTokens()
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return (bool) $this->is_admin;

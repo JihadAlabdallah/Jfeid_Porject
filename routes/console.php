@@ -8,7 +8,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Weekly "Time to check your car" push notification (every Saturday, 10:00 UTC).
+// Weekly "Time to check your car" push notification: every Monday at 10:00
+// Lebanon time (follows summer / winter time).
 Schedule::command('notifications:weekly-reminder')
-    ->weeklyOn(6, '10:00')
+    ->weeklyOn(1, '10:00')
+    ->timezone('Asia/Beirut')
     ->withoutOverlapping();
