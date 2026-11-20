@@ -42,4 +42,16 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
+
+# Keys and database backups: never commit (the repository is public)
+*firebase-adminsdk*.json
+*service-account*.json
+*credentials*.json
+*.pem
+*.p12
+*.key
+*.dump
+*.backup
 
