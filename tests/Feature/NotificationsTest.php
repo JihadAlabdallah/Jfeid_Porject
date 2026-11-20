@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\NotificationResource;
 use App\Filament\Resources\NotificationResource\Pages\ListNotifications;
+use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Models\DeviceToken;
 use App\Models\Notification;
@@ -367,6 +368,86 @@ class NotificationsTest extends TestCase
         Livewire::test(ListUsers::class)
             ->assertTableColumnStateSet('device_tokens_exists', true, $maryam)
             ->assertTableColumnStateSet('device_tokens_exists', false, $sami);
+    }
+
+    // ---- Users page: when did the customer last use the app ----
+
+    private function withActivity(User $user): User
+    {
+        return User::query()->withAppActivity()->findOrFail($user->id);
+    }
+
+    public function test_last_in_app_comes_from_sign_in_and_signed_in_requests(): void
+    {
+        $this->travelTo('2026-11-01 09:00:00');
+        $maryam = $this->customer('Maryam');
+        $this->postJson('/api/signin', ['name_or_email' => 'maryam@example.com', 'password' => 'secret123'])->assertOk();
+
+        $this->assertSame('2026-11-01 09:00:00', $this->withActivity($maryam)->lastSeenInApp()->toDateTimeString());
+
+        // a signed-in request later (profile) moves it forward
+        $token = $maryam->tokens()->first();
+        $this->travelTo('2026-11-05 12:30:00');
+        $token->forceFill(['last_used_at' => now()])->save(); // what Sanctum does on each signed-in request
+        $this->assertSame('2026-11-05 12:30:00', $this->withActivity($maryam)->lastSeenInApp()->toDateTimeString());
+
+        // never signed in
+        $this->assertNull($this->withActivity($this->customer('Sami'))->lastSeenInApp());
+    }
+
+    public function test_real_signed_in_api_call_updates_last_in_app(): void
+    {
+        $maryam = $this->customer('Maryam');
+        $this->travelTo('2026-11-01 09:00:00');
+        $plain = $maryam->createToken('authToken')->plainTextToken;
+
+        $this->travelTo('2026-11-10 08:00:00');
+        $this->withToken($plain)->getJson('/api/profile')->assertOk();
+
+        $this->assertSame('2026-11-10 08:00:00', $this->withActivity($maryam)->lastSeenInApp()->toDateTimeString());
+    }
+
+    public function test_app_opening_with_new_version_is_recorded_and_sending_does_not_change_it(): void
+    {
+        $this->firebase();
+        $maryam = $this->customer('Maryam');
+        Sanctum::actingAs($maryam);
+
+        $this->travelTo('2026-11-20 10:00:00');
+        $this->postJson('/api/device-tokens', ['token' => 'maryam-phone'])->assertOk();
+        $this->travelTo('2026-11-21 18:00:00');
+        $this->postJson('/api/device-tokens', ['token' => 'maryam-phone'])->assertOk(); // opened again
+
+        $this->assertSame('2026-11-21 18:00:00', (string) $this->withActivity($maryam)->app_last_opened);
+
+        // a notification sent later must not look like the customer opened the app
+        $this->travelTo('2026-11-25 10:00:00');
+        $this->panel();
+        Livewire::test(ListNotifications::class)
+            ->callAction('send', data: ['audience' => 'selected', 'users' => [$maryam->id], 'title' => 'Hi', 'body' => 'x'])
+            ->assertNotified('Notification sent');
+
+        $this->assertSame('2026-11-21 18:00:00', (string) $this->withActivity($maryam)->app_last_opened);
+        $this->assertSame('2026-11-21 18:00:00', $this->withActivity($maryam)->lastSeenInApp()->toDateTimeString());
+    }
+
+    public function test_users_page_shows_last_in_app_and_never(): void
+    {
+        $this->panel();
+        $maryam = $this->customer('Maryam', ['maryam-phone']);
+        $maryam->createToken('authToken');
+        $sami = $this->customer('Sami');
+
+        $this->get(UserResource::getUrl('index'))
+            ->assertOk()
+            ->assertSee('Last in app')
+            ->assertSee('Never');
+
+        Livewire::test(ListUsers::class)
+            ->assertCanSeeTableRecords([$maryam, $sami])
+            ->assertTableColumnStateSet('device_tokens_exists', true, $maryam)
+            ->assertTableColumnStateSet('device_tokens_exists', false, $sami)
+            ->assertTableColumnStateSet('last_seen_in_app', null, $sami);
     }
 
     public function test_deleting_a_customer_removes_their_phones(): void

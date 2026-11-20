@@ -56,8 +56,8 @@ class NotificationSender
             $result = $this->fcm->sendToToken($device->token, $title, $body);
 
             if ($result['ok']) {
+                // last_used_at is left alone: it means "app last opened" (set when the app registers)
                 $sent++;
-                $device->forceFill(['last_used_at' => now()])->save();
                 continue;
             }
 

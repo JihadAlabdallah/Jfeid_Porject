@@ -6,7 +6,9 @@ use App\Models\User;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Actions\BulkAction;
 use App\Filament\Resources\UserResource\Pages;
@@ -53,6 +55,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->withAppActivity())
             ->columns([
                 TextColumn::make('name')->searchable(),
                 TextColumn::make('email')->searchable(),
@@ -71,9 +74,24 @@ class UserResource extends Resource
                 // has a phone registered for push notifications (new app version)
                 IconColumn::make('device_tokens_exists')
                     ->label('App')
-                    ->getStateUsing(fn (User $record) => $record->deviceTokens()->exists())
+                    ->getStateUsing(fn (User $record) => (bool) ($record->device_tokens_exists ?? $record->deviceTokens()->exists()))
                     ->boolean()
-                    ->tooltip(fn ($state) => $state ? 'Can receive notifications' : 'No phone registered yet'),
+                    ->tooltip(fn (User $record, $state) => match (true) {
+                        ! $state => 'No phone registered yet (needs the new app version)',
+                        (bool) $record->app_last_opened => 'Can receive notifications. App last opened '
+                            . Carbon::parse($record->app_last_opened)->timezone('Asia/Beirut')->format('M j, Y H:i'),
+                        default => 'Can receive notifications',
+                    }),
+                // last sign-in or signed-in activity in the app (see User::scopeWithAppActivity)
+                TextColumn::make('last_seen_in_app')
+                    ->label('Last in app')
+                    ->getStateUsing(fn (User $record) => $record->lastSeenInApp())
+                    ->since()
+                    ->placeholder('Never')
+                    ->tooltip(fn (User $record) => $record->lastSeenInApp()
+                        ? $record->lastSeenInApp()->timezone('Asia/Beirut')->format('M j, Y H:i')
+                            . ' (last sign-in or account activity in the app)'
+                        : 'Never signed in to the app, or logged out'),
                 TextColumn::make('created_at')->dateTime(),
             ])
             ->bulkActions([
