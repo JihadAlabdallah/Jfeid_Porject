@@ -25,7 +25,7 @@
             @foreach ([
                 ['🛢️', 'Full service history', 'Engine oil, gear, differential, steering and transmission oil, batteries, wheels and more, with the date, reading and details of every service.'],
                 ['⏰', 'Know what’s due next', 'See when each service is due next, by kilometres or miles, so nothing is missed.'],
-                ['🚗', 'All your cars', 'Add every car you own, each with its own plate number and service record.'],
+                ['🚗', 'All your cars', 'Every car you bring to Jfeid in one account, each with its own plate number and service record.'],
                 ['🔔', 'Reminders', 'A weekly reminder to check your car and oil, and a message when your car is ready.'],
             ] as [$icon, $title, $text])
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
@@ -44,7 +44,7 @@
             <ol class="mt-10 grid gap-6 sm:grid-cols-3 text-center">
                 @foreach ([
                     ['Create your account', 'Sign up in the app with your name and phone number.'],
-                    ['Get your car serviced', 'Every service done at Jfeid is added to your car’s record.'],
+                    ['Get your car serviced', 'The Jfeid team adds your car and every service done on it to your record.'],
                     ['Stay on schedule', 'Open the app any time to see your history and what’s due next.'],
                 ] as $i => [$title, $text])
                     <li>

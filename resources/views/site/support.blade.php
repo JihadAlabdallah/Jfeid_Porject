@@ -9,9 +9,9 @@
 
         <div class="mt-10 space-y-4">
             @foreach ([
-                ['How do I create an account?', 'Download the Jfeid app, tap Sign up and enter your name, phone number and a password. You can then add your cars.'],
+                ['How do I create an account?', 'Download the Jfeid app, tap Sign up and enter your name, phone number and a password. The Jfeid team then links your cars to your account.'],
                 ['My service is missing from the app.', 'Services done at Jfeid are added by our team. If one is missing or wrong, contact us below with your car plate and the date of the service.'],
-                ['How do I add another car?', 'You can add more cars from the app. Each car has its own plate number and service history.'],
+                ['How do I add another car?', 'Cars are added to your account by the Jfeid team. Bring the car to Jfeid or contact us below with the car type and plate number, and it will appear in your app with its own service history.'],
                 ['I’m not getting notifications.', 'Make sure notifications are allowed for Jfeid in your phone’s settings, and that you are signed in to the app.'],
                 ['I forgot my password.', 'Use the “Forgot password” option on the sign-in screen, or contact us below.'],
                 ['How do I delete my account?', 'You can delete your account from within the app. This removes your profile, cars and service records. See our Privacy Policy for details.'],
