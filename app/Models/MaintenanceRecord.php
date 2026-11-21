@@ -140,6 +140,49 @@ class MaintenanceRecord extends Model
     ];
 
     /**
+     * Details that usually stay the same from one service of a car to the next,
+     * so a new record of that type starts with them filled in. Readings, date,
+     * price and technician are not copied, and neither is "Other" (each one is
+     * a different job).
+     *
+     * @var array<string, array<string>>
+     */
+    public const CARRY_OVER_FIELDS = [
+        'oil_change' => ['oil_type', 'oil_quantity', 'filter'],
+        'gear_oil_change' => ['oil_type', 'quantity'],
+        'differential_oil_change' => ['oil_type', 'quantity'],
+        'transmission_oil_change' => ['oil_type', 'quantity'],
+        'steering_oil_change' => ['oil_type', 'quantity'],
+        'battery_service' => ['brand', 'size'],
+        'wheel_service' => ['wheel_name', 'quantity', 'wheel_size'],
+    ];
+
+    /** The car's latest service of this type that has its details saved, or null. */
+    public static function lastServiceOf(mixed $vehicleId, ?string $type): ?self
+    {
+        if (blank($vehicleId) || ! isset(self::CARRY_OVER_FIELDS[$type])) {
+            return null;
+        }
+
+        return self::query()
+            ->where('vehicle_id', $vehicleId)
+            ->where('type', $type)
+            ->whereHas(self::TYPE_DETAILS[$type]['relation'])
+            ->orderByDesc('maintenance_date')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /** @return array<string, mixed> this record's carry-over details (see CARRY_OVER_FIELDS) */
+    public function carryOverValues(): array
+    {
+        return array_intersect_key(
+            $this->typeDetailValues(),
+            array_flip(self::CARRY_OVER_FIELDS[$this->type] ?? [])
+        );
+    }
+
+    /**
      * The type-specific values (oil_type, brand, ...) from the detail row, so
      * an edit form opens filled in. Empty when there is no detail row yet.
      *

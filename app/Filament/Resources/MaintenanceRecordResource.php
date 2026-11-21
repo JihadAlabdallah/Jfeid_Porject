@@ -71,7 +71,8 @@ class MaintenanceRecordResource extends Resource
                     ->placeholder('Select a user first')
                     ->searchable()
                     ->required()
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(fn (Get $get, Set $set, $state, $record) => \App\Filament\Support\ServiceFormFields::fillFromLastService($get, $set, $state, $record)),
 
 
                 Select::make('type')
@@ -80,7 +81,10 @@ class MaintenanceRecordResource extends Resource
                     ->required()
                     // pre-selected when coming from a detail page's "New" button
                     ->default(fn () => \App\Filament\Support\MaintenanceFlow::typeFromRequest())
-                    ->live(),
+                    ->live()
+                    // new record: details start as the car's last service of this type
+                    ->afterStateUpdated(fn (Get $get, Set $set, $record) => \App\Filament\Support\ServiceFormFields::fillFromLastService($get, $set, $get('vehicle_id'), $record))
+                    ->helperText(fn (Get $get, $record) => \App\Filament\Support\ServiceFormFields::lastServiceHint($get, $get('vehicle_id'), $record)),
                 TextInput::make('brand')
                     ->label('Brand')
                     ->visible(fn($get) => $get('type') === 'battery_service')

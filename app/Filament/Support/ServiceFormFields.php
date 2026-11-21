@@ -2,7 +2,9 @@
 
 namespace App\Filament\Support;
 
+use App\Models\MaintenanceRecord;
 use App\Support\Distance;
+use Illuminate\Support\Carbon;
 use Closure;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -98,6 +100,42 @@ class ServiceFormFields
                 })
                 ->visible($visible),
         ];
+    }
+
+    /**
+     * New record only: fill the type's details (oil type, quantity, filter,
+     * brand, ...) from the car's last service of that type. Runs when the car
+     * or the type is chosen; a car with no such service clears them, so values
+     * from another car or type never stay behind.
+     */
+    public static function fillFromLastService(Get $get, Set $set, mixed $vehicleId, mixed $record): void
+    {
+        $type = (string) $get('type');
+
+        if ($record !== null || ! isset(MaintenanceRecord::CARRY_OVER_FIELDS[$type])) {
+            return;
+        }
+
+        $values = MaintenanceRecord::lastServiceOf($vehicleId, $type)?->carryOverValues() ?? [];
+
+        foreach (MaintenanceRecord::CARRY_OVER_FIELDS[$type] as $field) {
+            $set($field, $values[$field] ?? null);
+        }
+    }
+
+    /** Note under the type field, saying where the filled-in details came from. */
+    public static function lastServiceHint(Get $get, mixed $vehicleId, mixed $record): ?string
+    {
+        if ($record !== null) {
+            return null;
+        }
+
+        $last = MaintenanceRecord::lastServiceOf($vehicleId, $get('type'));
+
+        return $last === null
+            ? null
+            : 'Details filled in from this car’s last ' . MaintenanceRecord::TYPE_LABELS[$last->type]
+                . ' (' . Carbon::parse($last->maintenance_date)->format('M j, Y') . '). Check them and change if needed.';
     }
 
     /** Fields of the "Other" type. Price and employee are the record's own fields. */
