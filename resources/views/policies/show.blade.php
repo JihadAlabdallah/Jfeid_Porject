@@ -1,39 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.site')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $policy->title ?? 'Policy Page' }}</title>
-    {{-- typography plugin: styles the headings and lists written in the dashboard editor --}}
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-</head>
+@section('title', ($policy->title ?? 'Policy') . ' | Jfeid')
 
-<body class="bg-gray-50 text-gray-800">
-
-    <!-- Header -->
-    <header class="bg-white shadow p-6 text-center">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+@section('content')
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-8">
             {{ $policy->title ?? 'Policy Page' }}
         </h1>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto p-6 mt-4 space-y-6">
-        <div class="bg-white p-6 rounded-2xl shadow prose prose-lg prose-blue">
+        {{-- max-w-none: the card fills the centred column instead of sticking to the left --}}
+        <article class="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-200 prose prose-gray max-w-none
+                        prose-headings:text-gray-900 prose-h2:text-xl prose-h2:mt-10 prose-a:text-amber-600">
             @if ($policy && $policy->content)
                 {!! $policy->content !!}
             @else
                 <p class="text-gray-500 italic text-center">No content available.</p>
             @endif
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="text-center text-gray-500 p-6 mt-8 border-t">
-        &copy; {{ date('Y') }} Jfeid. All rights reserved.
-    </footer>
-
-</body>
-
-</html>
+        </article>
+    </div>
+@endsection

@@ -21,9 +21,9 @@ if (env('RENDER_DUMMY', false)) {
 
 
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// public website: home (App Store "Marketing URL") and support (App Store "Support URL")
+Route::view('/', 'site.home')->name('site.home');
+Route::view('/support', 'site.support')->name('site.support');
 
 // Reset Password
 Route::get('/password-reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset.form');
