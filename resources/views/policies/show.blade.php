@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $policy->title ?? 'Policy Page' }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    {{-- typography plugin: styles the headings and lists written in the dashboard editor --}}
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800">
@@ -30,7 +31,7 @@
 
     <!-- Footer -->
     <footer class="text-center text-gray-500 p-6 mt-8 border-t">
-        &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+        &copy; {{ date('Y') }} Jfeid. All rights reserved.
     </footer>
 
 </body>
