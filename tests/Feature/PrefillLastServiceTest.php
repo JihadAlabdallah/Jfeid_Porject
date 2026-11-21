@@ -84,6 +84,29 @@ class PrefillLastServiceTest extends TestCase
         $this->assertSame('6', (string) MaintenanceRecord::oldest('id')->first()->oilChange->oil_quantity);
     }
 
+    public function test_details_typed_by_hand_are_never_replaced(): void
+    {
+        $this->oil($this->hilux, '2026-10-01 10:00:00', '5W-30', '6', 'Toyota OEM');
+
+        // details typed first, the car chosen afterwards: only the empty field is filled
+        Livewire::withQueryParams(['type' => 'oil_change'])
+            ->test(CreateMaintenanceRecord::class)
+            ->fillForm(['oil_type' => 'Castrol 0W-20', 'oil_quantity' => '4.5'])
+            ->fillForm(['user_id' => $this->customer->id])
+            ->fillForm(['vehicle_id' => $this->hilux->id])
+            ->assertFormSet(['oil_type' => 'Castrol 0W-20', 'oil_quantity' => '4.5', 'filter' => 'Toyota OEM']);
+
+        // auto-filled, then one value changed by hand, then the car changed: the hand-typed value stays
+        $corolla = Vehicle::create(['user_id' => $this->customer->id, 'type' => 'Corolla', 'distance_unit' => 'km']);
+        Livewire::test(CreateMaintenanceRecord::class)
+            ->fillForm(['user_id' => $this->customer->id])
+            ->fillForm(['vehicle_id' => $this->hilux->id])
+            ->fillForm(['type' => 'oil_change'])
+            ->fillForm(['oil_quantity' => '7'])
+            ->fillForm(['vehicle_id' => $corolla->id])
+            ->assertFormSet(['oil_quantity' => '7', 'oil_type' => null, 'filter' => null]);
+    }
+
     public function test_type_chosen_before_the_car_also_fills_in(): void
     {
         $this->service($this->hilux, 'battery_service', '2026-09-01 10:00:00', ['brand' => 'Bosch', 'size' => '70Ah']);

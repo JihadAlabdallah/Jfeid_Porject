@@ -85,6 +85,7 @@ class MaintenanceRecordResource extends Resource
                     // new record: details start as the car's last service of this type
                     ->afterStateUpdated(fn (Get $get, Set $set, $record) => \App\Filament\Support\ServiceFormFields::fillFromLastService($get, $set, $get('vehicle_id'), $record))
                     ->helperText(fn (Get $get, $record) => \App\Filament\Support\ServiceFormFields::lastServiceHint($get, $get('vehicle_id'), $record)),
+                \App\Filament\Support\ServiceFormFields::prefillTracker(),
                 TextInput::make('brand')
                     ->label('Brand')
                     ->visible(fn($get) => $get('type') === 'battery_service')

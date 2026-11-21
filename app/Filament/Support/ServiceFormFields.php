@@ -6,6 +6,7 @@ use App\Models\MaintenanceRecord;
 use App\Support\Distance;
 use Illuminate\Support\Carbon;
 use Closure;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Get;
@@ -102,31 +103,59 @@ class ServiceFormFields
         ];
     }
 
+    /** Remembers what was filled in automatically (never saved). Add it to the form. */
+    public static function prefillTracker(): Hidden
+    {
+        return Hidden::make(self::PREFILLED)->default([])->dehydrated(false);
+    }
+
+    private const PREFILLED = 'prefilled_from_last';
+
     /**
      * New record only: fill the type's details (oil type, quantity, filter,
      * brand, ...) from the car's last service of that type. Runs when the car
-     * or the type is chosen; a car with no such service clears them, so values
-     * from another car or type never stay behind.
+     * or the type is chosen. Only fields that are empty or still hold the
+     * previous automatic value are replaced: anything typed by hand stays,
+     * while values filled in for another car or type never stay behind.
      */
     public static function fillFromLastService(Get $get, Set $set, mixed $vehicleId, mixed $record): void
     {
         $type = (string) $get('type');
 
-        if ($record !== null || ! isset(MaintenanceRecord::CARRY_OVER_FIELDS[$type])) {
+        if ($record !== null) {
             return;
         }
 
+        $previous = (array) $get(self::PREFILLED);
+        $fields = MaintenanceRecord::CARRY_OVER_FIELDS[$type] ?? [];
         $values = MaintenanceRecord::lastServiceOf($vehicleId, $type)?->carryOverValues() ?? [];
+        $filled = [];
 
-        foreach (MaintenanceRecord::CARRY_OVER_FIELDS[$type] as $field) {
-            $set($field, $values[$field] ?? null);
+        // fields auto-filled for the previous car / type, plus this type's fields
+        foreach (array_unique([...array_keys($previous), ...$fields]) as $field) {
+            $current = $get($field);
+            $untouched = blank($current)
+                || (array_key_exists($field, $previous) && (string) $previous[$field] === (string) $current);
+
+            if (! $untouched) {
+                continue; // typed by hand: keep it
+            }
+
+            $value = in_array($field, $fields, true) ? ($values[$field] ?? null) : null;
+            $set($field, $value);
+
+            if (filled($value)) {
+                $filled[$field] = $value;
+            }
         }
+
+        $set(self::PREFILLED, $filled);
     }
 
     /** Note under the type field, saying where the filled-in details came from. */
     public static function lastServiceHint(Get $get, mixed $vehicleId, mixed $record): ?string
     {
-        if ($record !== null) {
+        if ($record !== null || empty($get(self::PREFILLED))) {
             return null;
         }
 

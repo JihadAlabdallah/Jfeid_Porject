@@ -24,6 +24,7 @@ class MaintenanceRecordsRelationManager extends RelationManager
                     // new record: details start as this car's last service of this type
                     ->afterStateUpdated(fn ($get, $set, $record, $livewire) => \App\Filament\Support\ServiceFormFields::fillFromLastService($get, $set, $livewire->getOwnerRecord()->getKey(), $record))
                     ->helperText(fn ($get, $record, $livewire) => \App\Filament\Support\ServiceFormFields::lastServiceHint($get, $livewire->getOwnerRecord()->getKey(), $record)),
+                \App\Filament\Support\ServiceFormFields::prefillTracker(),
 
                 Forms\Components\DateTimePicker::make('maintenance_date')
                     ->label('Maintenance Date')
